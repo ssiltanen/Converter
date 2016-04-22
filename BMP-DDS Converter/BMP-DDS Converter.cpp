@@ -10,7 +10,7 @@
 int main()
 {
 	std::shared_ptr<IConverter> pConverter(new Converter);
-	pConverter->convert("D:\\Code Projects\\BMP-DDS Converter\\Debug\\example.bmp");
+	pConverter->convert("D:\\Code Projects\\Converter\\Debug\\example.bmp");
 	std::string asd;
 	std::cin >> asd;
 }

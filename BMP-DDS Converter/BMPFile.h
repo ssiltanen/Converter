@@ -10,7 +10,7 @@
 //The size of BITMAPFILEHEADER (w/o pragma) is 20, but in the file it is written sequentially as 14 bytes.
 #pragma pack(2)
 
-typedef struct {                     /**** BMP file header structure ****/
+typedef struct {				/**** BMP file header structure ****/
 	unsigned short bfType;           // Number for file
 	unsigned int   bfSize;           // Size of file
 	unsigned short bfReserved1;      // Reserved
@@ -20,9 +20,9 @@ typedef struct {                     /**** BMP file header structure ****/
 
 #pragma pack()
 
-#define BF_TYPE_MB 0x4D42          // "MB"
+#define BF_TYPE_MB 0x4D42          //MB
 
-typedef struct {                     /**** BMP file info structure ****/
+typedef struct {				/**** BMP file info structure ****/
 	unsigned int   biSize;           // Size of info header
 	int            biWidth;          // Width of image
 	int            biHeight;         // Height of image
@@ -36,10 +36,10 @@ typedef struct {                     /**** BMP file info structure ****/
 	unsigned int   biClrImportant;   // Number of important colors
 } BITMAPINFOHEADER;
 
-#define BI_RGB       0             // No compression - straight BGR data
-#define BI_RLE8      1             // 8-bit run-length compression
-#define BI_RLE4      2             // 4-bit run-length compression
-#define BI_BITFIELDS 3             // RGB bitmap with RGB masks
+#define BI_RGB       0				// No compression - straight BGR data
+#define BI_RLE8      1				// 8-bit run-length compression
+#define BI_RLE4      2				// 4-bit run-length compression
+#define BI_BITFIELDS 3				// RGB bitmap with RGB masks
 
 typedef struct {                     /**** Colormap entry structure ****/
 	unsigned char  rgbBlue;          // Blue value

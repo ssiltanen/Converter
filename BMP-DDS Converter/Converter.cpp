@@ -40,7 +40,7 @@ std::shared_ptr<IFiletype> Converter::createFiletype(const std::string & locatio
 	//Create correct type ptr
 	std::shared_ptr<IFiletype> pFiletype;
 	if (filetype == "bmp") pFiletype = std::shared_ptr<IFiletype>(new BMPFile(location));
-	else if (filetype == "dds") pFiletype = std::shared_ptr<IFiletype>(new DDSFile());
+	else if (filetype == "dds") pFiletype = std::shared_ptr<IFiletype>(new DDSFile(location));
 	else throw std::bad_function_call();
 
 	//check if previous filetype exists
