@@ -36,6 +36,9 @@ BMPFile::BMPFile(const std::string& location)
 	if (m_pBmpInfoHeader->biBitCount != BIT_COUNT_24) 
 		builderFailed(dataBuffer, 2, "File " + location + " isn't a 24bpp file");
 
+	if (m_pBmpInfoHeader->biWidth * 3 % 4 != 0 || m_pBmpInfoHeader->biHeight * 3 % 4 != 0)
+		builderFailed(dataBuffer, 2, "File " + location + " does not have width or height divisible by 4");
+
 	unsigned int imageSize = m_pBmpInfoHeader->biSizeImage;
 
 	//Check if the header shows the size of the image
@@ -47,10 +50,9 @@ BMPFile::BMPFile(const std::string& location)
 
 	// Allocate pixel memory
 	m_pixels = new uint8_t[imageSize];
-	std::cout << m_pBmpInfoHeader->biWidth << " " << m_pBmpInfoHeader->biHeight << std::endl;
 
 	// Go to where image data starts
-	file.seekg(m_pBmpHeader->bfOffBits /* + 1 */); //not sure of this, files act differently
+	file.seekg(m_pBmpHeader->bfOffBits);
 
 	//read in image data
 	//Supports only divisible by 4 width and height so no padding is needed
@@ -62,7 +64,7 @@ BMPFile::BMPFile(const std::string& location)
 		tmpRGB = m_pixels[i];
 		m_pixels[i] = m_pixels[i + 2];
 		m_pixels[i + 2] = tmpRGB;
-		//std::cout << (int)m_pixels[i] << " " << (int)m_pixels[i + 1] << " " << (int)m_pixels[i + 2] << " " << (int)m_pixels[i + 3] << std::endl;
+		std::cout << (int)m_pixels[i] << " " << (int)m_pixels[i + 1] << " " << (int)m_pixels[i + 2] << " " << (int)m_pixels[i + 3] << std::endl;
 	}
 	delete[] dataBuffer[0];
 	delete[] dataBuffer[1];

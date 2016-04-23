@@ -186,5 +186,7 @@ private:
 	DDS_HEADER_DXT10* m_pDdsHeaderDxt10;
 	uint8_t* m_mainData;
 	uint8_t* m_additionalData;
+
+	void builderFailed(uint8_t* dataBuffer[], int arraySize, std::string& cause) const;
 };
 

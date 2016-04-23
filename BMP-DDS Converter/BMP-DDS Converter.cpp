@@ -11,7 +11,7 @@ int main()
 {
 	try {
 		std::shared_ptr<IConverter> pConverter(new Converter);
-		pConverter->convert("D:\\Code Projects\\Converter\\Debug\\WHT.bmp");
+		pConverter->convert("D:\\Code Projects\\Converter\\Debug\\kode_red.bmp");
 		std::string asd;
 		std::cin >> asd;
 	}
