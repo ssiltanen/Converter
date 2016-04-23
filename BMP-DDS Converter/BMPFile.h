@@ -20,7 +20,8 @@ typedef struct {				/**** BMP file header structure ****/
 
 #pragma pack()
 
-#define BF_TYPE_MB 0x4D42          //MB
+#define BF_TYPE_MB 0x4D42       //MB
+#define BIT_COUNT_24 24			//Only 24 bits per pixel supported
 
 typedef struct {				/**** BMP file info structure ****/
 	unsigned int   biSize;           // Size of info header
@@ -35,11 +36,6 @@ typedef struct {				/**** BMP file info structure ****/
 	unsigned int   biClrUsed;        // Number of colors used
 	unsigned int   biClrImportant;   // Number of important colors
 } BITMAPINFOHEADER;
-
-#define BI_RGB       0				// No compression - straight BGR data
-#define BI_RLE8      1				// 8-bit run-length compression
-#define BI_RLE4      2				// 4-bit run-length compression
-#define BI_BITFIELDS 3				// RGB bitmap with RGB masks
 
 typedef struct {                     /**** Colormap entry structure ****/
 	unsigned char  rgbBlue;          // Blue value
@@ -57,5 +53,7 @@ private:
 	BITMAPFILEHEADER* m_pBmpHeader;
 	BITMAPINFOHEADER* m_pBmpInfoHeader;
 	uint8_t* m_pixels;
+
+	void builderFailed(uint8_t* dataBuffer[], int arraySize, std::string& cause) const;
 };
 

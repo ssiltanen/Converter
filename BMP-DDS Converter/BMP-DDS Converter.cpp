@@ -9,9 +9,14 @@
 
 int main()
 {
-	std::shared_ptr<IConverter> pConverter(new Converter);
-	pConverter->convert("D:\\Code Projects\\Converter\\Debug\\example.bmp");
-	std::string asd;
-	std::cin >> asd;
+	try {
+		std::shared_ptr<IConverter> pConverter(new Converter);
+		pConverter->convert("D:\\Code Projects\\Converter\\Debug\\WHT.bmp");
+		std::string asd;
+		std::cin >> asd;
+	}
+	catch (...) {
+		std::cout << "Something went horribly wrong!" << std::endl;
+	}
 }
 

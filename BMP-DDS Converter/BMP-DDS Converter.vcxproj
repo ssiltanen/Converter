@@ -159,6 +159,7 @@
     <ClInclude Include="Converter.h" />
     <ClInclude Include="DDSFile.h" />
     <ClInclude Include="Interfaces.h" />
+    <ClInclude Include="MyException.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

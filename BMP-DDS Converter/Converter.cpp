@@ -18,8 +18,8 @@ void Converter::convert(const std::string& location)
 	try {
 		std::shared_ptr<IFiletype> pFiletype = createFiletype(location);
 	}
-	catch (std::bad_function_call& e) {
-		std::cout << "convert: " << e.what() << std::endl;
+	catch (std::exception& e) {
+		std::cout << "Error in Convert(): " << e.what() << std::endl;
 	}
 
 }
@@ -39,8 +39,8 @@ std::shared_ptr<IFiletype> Converter::createFiletype(const std::string & locatio
 	
 	//Create correct type ptr
 	std::shared_ptr<IFiletype> pFiletype;
-	if (filetype == "bmp") pFiletype = std::shared_ptr<IFiletype>(new BMPFile(location));
-	else if (filetype == "dds") pFiletype = std::shared_ptr<IFiletype>(new DDSFile(location));
+	if (filetype == "bmp" || filetype == "BMP") pFiletype = std::shared_ptr<IFiletype>(new BMPFile(location));
+	else if (filetype == "dds" || filetype == "DDS") pFiletype = std::shared_ptr<IFiletype>(new DDSFile(location));
 	else throw std::bad_function_call();
 
 	//check if previous filetype exists
