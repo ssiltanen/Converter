@@ -1,12 +1,17 @@
 #pragma once
 
+//Sampo Siltanen 2016
+//
+//Class to hold BMP 24 bits per pixel filetype data
+//See virtual function documentation in Interfaces.h
+
 #include "Interfaces.h"
 
 #include <string>
 #include <stdint.h>
 
 
-//Without the pragma, the short fields are being padded to 4 bytes. 
+//Without the pragma, the unsigned short fields are being padded to 4 bytes. 
 //The size of BITMAPFILEHEADER (w/o pragma) is 20, but in the file it is written sequentially as 14 bytes.
 #pragma pack(2)
 
@@ -20,7 +25,7 @@ typedef struct {				/**** BMP file header structure ****/
 
 #pragma pack()
 
-#define BF_TYPE_MB 0x4D42       //MB
+#define BF_TYPE_MB 0x4D42       //MB - shows that file is BMP file
 #define BIT_COUNT_24 24			//Only 24 bits per pixel supported
 
 typedef struct {				/**** BMP file info structure ****/
@@ -37,23 +42,19 @@ typedef struct {				/**** BMP file info structure ****/
 	unsigned int   biClrImportant;   // Number of important colors
 } BITMAPINFOHEADER;
 
-typedef struct {                     /**** Colormap entry structure ****/
-	unsigned char  rgbBlue;          // Blue value
-	unsigned char  rgbGreen;         // Green value
-	unsigned char  rgbRed;           // Red value
-	unsigned char  rgbReserved;      // Reserved
-} RGBQUAD;
-
 class BMPFile : public IFiletype {
 public:
-	BMPFile(const std::string& location);
+	BMPFile();
 	virtual ~BMPFile();
+
+	void VInitialize(const std::string& location);
 
 private:
 	BITMAPFILEHEADER* m_pBmpHeader;
 	BITMAPINFOHEADER* m_pBmpInfoHeader;
 	uint8_t* m_pixels;
 
-	void builderFailed(uint8_t* dataBuffer[], int arraySize, std::string& cause) const;
+	//Deletes objects pointed by the given array of pointers and throws exception with given message
+	void initializeFailed(uint8_t* dataBuffer[], int arraySize, std::string& cause) const;
 };
 

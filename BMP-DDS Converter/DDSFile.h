@@ -1,5 +1,10 @@
 #pragma once
 
+//Sampo Siltanen 2016
+//
+//Class to hold DDS BC1(DXT1) compressed filetype data
+//See virtual function documentation in Interfaces.h
+
 #include "Interfaces.h"
 
 #include <string>
@@ -38,19 +43,22 @@ typedef struct {			/**** DDS file header ****/
 #define MAKEFOURCC(c0,c1,c2,c3) ((unsigned int)(char)(c0)|((unsigned int)(char)(c1)<<8)|((unsigned int)(char)(c2)<<16)|((unsigned int)(char)(c3)<<24))
 #endif
 
-#define DDPF_FOURCC 0x4										//Flag to show that texture contains compressed RGB data; dwFourCC contains valid data.
-#define DXT1_FOURCC (MAKEFOURCC('D', 'X', 'T', '1'))		//DXT1 value for dwfourCC
+#define DDPF_FOURCC 0x4									//Flag to show that texture contains compressed RGB data; dwFourCC contains valid data.
+#define DXT1_FOURCC (MAKEFOURCC('D', 'X', 'T', '1'))	//DXT1 value for dwfourCC
 
 class DDSFile : public IFiletype {
 public:
-	DDSFile(const std::string& location);
+	DDSFile();
 	virtual ~DDSFile();
+
+	void VInitialize(const std::string& location);
 
 private:
 	DDS_HEADER* m_pDdsHeader;
 	uint8_t* m_mainData;
 	uint8_t* m_additionalData;
 
-	void builderFailed(uint8_t* dataBuffer, std::string& cause) const;
+	//Deletes object that the given pointer points at and throws exception with given message
+	void initializeFailed(uint8_t* dataBuffer, std::string& cause) const;
 };
 
