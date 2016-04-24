@@ -64,8 +64,10 @@ BMPFile::BMPFile(const std::string& location)
 		tmpRGB = m_pixels[i];
 		m_pixels[i] = m_pixels[i + 2];
 		m_pixels[i + 2] = tmpRGB;
-		std::cout << (int)m_pixels[i] << " " << (int)m_pixels[i + 1] << " " << (int)m_pixels[i + 2] << " " << (int)m_pixels[i + 3] << std::endl;
 	}
+
+	std::cout << "File successfully loaded..." << std::endl;
+
 	delete[] dataBuffer[0];
 	delete[] dataBuffer[1];
 }
