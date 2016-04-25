@@ -31,16 +31,16 @@ void Converter::VConvert(const std::string& fromFormat, const std::string& targe
 	std::shared_ptr<IFiletype> pTargetFiletype;
 	try {
 		pFromFiletype = getFiletype(fromFormat);
-		pTargetFiletype = getFiletype(targetFormat);
+		pTargetFiletype = getUninitializedFiletype(targetFormat);
+
+		//pTargetFiletype->VConversionInitialize(pFromFiletype->VGetUncompressedImageData, pFromFiletype->VGetWidth, pFromFiletype->VGetHeight);
 	}
 	catch (std::exception& e) {
 		std::cout << "Error in Convert(): " << e.what() << std::endl;
 		return;
 	}
 
-	//DO CONVERSION HERE
-
-	//CREATE FILE
+	pTargetFiletype->VCreateFile();
 }
 
 void Converter::loadFiletype(const std::string & location)
@@ -58,9 +58,9 @@ void Converter::loadFiletype(const std::string & location)
 
 	//Initialize filetype with actual file
 	try {
-		pFiletype->VInitialize(location);
+		pFiletype->VInitializeFromFile(location);
 	}
-	catch (MyException& e) {
+	catch (MyException) {
 		removeFiletype(filetype);
 		throw;
 	}

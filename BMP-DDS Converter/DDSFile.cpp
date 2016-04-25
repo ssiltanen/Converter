@@ -7,22 +7,21 @@
 
 DDSFile::DDSFile()
 {
+	m_pDdsHeader = nullptr;
+	m_mainData = nullptr;
 }
-
 
 DDSFile::~DDSFile()
 {
 	delete m_pDdsHeader;
 	delete m_mainData;
-	delete m_additionalData;
 }
 
-void DDSFile::VInitialize(const std::string & location)
+void DDSFile::VInitializeFromFile(const std::string & location)
 {
-	uint8_t* dataBuffer = nullptr;
+	uint8_t* dataBuffer = nullptr; //temp
 
 	m_mainData = nullptr;
-	m_additionalData = nullptr;
 	m_pDdsHeader = nullptr;
 
 	std::ifstream file(location, std::ios::binary);
@@ -67,8 +66,86 @@ void DDSFile::VInitialize(const std::string & location)
 	delete dataBuffer;
 }
 
+void DDSFile::VConversionInitialize(uint8_t * uncompressedImageData, unsigned int width, unsigned int height)
+{
+	m_mainData = DXT1Compress(uncompressedImageData);
+	delete uncompressedImageData;
+
+	//Create header
+	m_pDdsHeader = new DDS_HEADER();
+	m_pDdsHeader->dwSize = HEADER_SIZE;
+	m_pDdsHeader->dwFlags = FLAGS;
+	m_pDdsHeader->dwHeight = height;
+	m_pDdsHeader->dwWidth = width;
+	m_pDdsHeader->dwPitchOrLinearSize = std::max((unsigned int)1, (m_pDdsHeader->dwWidth + 3) / 4) * std::max((unsigned int)1, (m_pDdsHeader->dwHeight + 3) / 4) * 8;
+	m_pDdsHeader->dwDepth = 0;
+	m_pDdsHeader->dwMipMapCount = 0;
+	m_pDdsHeader->dwReserved1[11] = {};
+
+	//Create pixel format
+	DDS_PIXELFORMAT pixelFormat;
+	pixelFormat.dwsize = INFO_SIZE;
+	pixelFormat.dwflags = DDPF_FOURCC;
+	pixelFormat.dwfourCC = DXT1_FOURCC;
+	pixelFormat.dwRGBBitCount = 0;
+	pixelFormat.dwRBitMask = 0;
+	pixelFormat.dwGBitMask = 0;
+	pixelFormat.dwBBitMask = 0;
+	pixelFormat.dwABitMask = 0;
+
+	m_pDdsHeader->ddspf = pixelFormat;
+	m_pDdsHeader->dwCaps = DDSCAPS_TEXTURE;
+	m_pDdsHeader->dwCaps2 = 0;
+	m_pDdsHeader->dwCaps3 = 0;
+	m_pDdsHeader->dwCaps4 = 0;
+	m_pDdsHeader->dwReserved2 = 0;
+}
+
+void DDSFile::VCreateFile() const
+{
+	//Muista dwMagic alkuun
+}
+
+unsigned int DDSFile::VGetWidth() const
+{
+	if (m_pDdsHeader == nullptr)
+		return 0;
+	return m_pDdsHeader->dwWidth;
+}
+
+unsigned int DDSFile::VGetHeight() const
+{
+	if (m_pDdsHeader == nullptr)
+		return 0;
+	return m_pDdsHeader->dwHeight;
+}
+
+unsigned int DDSFile::VGetFilesize() const
+{
+	if (m_pDdsHeader == nullptr)
+		return 0;
+	return m_pDdsHeader->dwSize;
+}
+
+uint8_t * DDSFile::VGetUncompressedImageData() const
+{
+	return decompress();
+}
+
 void DDSFile::initializeFailed(uint8_t * dataBuffer, std::string & cause) const
 {
 	delete dataBuffer;
 	throw MyException(cause);
+}
+
+uint8_t * DDSFile::DXT1Compress(const uint8_t* const uncompressedData) const
+{
+	return nullptr;
+}
+
+uint8_t * DDSFile::decompress() const
+{
+	if (m_mainData == nullptr)
+		return nullptr;
+	return nullptr;
 }

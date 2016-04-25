@@ -8,6 +8,9 @@
 
 BMPFile::BMPFile()
 {
+	m_pBmpHeader = nullptr;
+	m_pBmpInfoHeader = nullptr;
+	m_pixels = nullptr;
 }
 
 
@@ -18,7 +21,7 @@ BMPFile::~BMPFile()
 	delete m_pBmpInfoHeader;
 }
 
-void BMPFile::VInitialize(const std::string & location)
+void BMPFile::VInitializeFromFile(const std::string & location)
 {
 	uint8_t* dataBuffer[2] = { nullptr, nullptr }; // Header buffers
 	m_pixels = nullptr;
@@ -80,6 +83,68 @@ void BMPFile::VInitialize(const std::string & location)
 
 	delete[] dataBuffer[0];
 	delete[] dataBuffer[1];
+}
+
+void BMPFile::VConversionInitialize(uint8_t * uncompressedImageData, unsigned int width, unsigned int height)
+{
+	m_pBmpHeader = new BITMAPFILEHEADER();
+	m_pBmpInfoHeader = new BITMAPINFOHEADER();
+
+	m_pBmpHeader->bfType = BF_TYPE_MB;
+	m_pBmpHeader->bfSize = sizeof(uncompressedImageData) + sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
+	m_pBmpHeader->bfReserved1 = 0;
+	m_pBmpHeader->bfReserved2 = 0;
+	m_pBmpHeader->bfOffBits = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
+
+	m_pBmpInfoHeader->biSize = sizeof(BITMAPINFOHEADER);
+	m_pBmpInfoHeader->biWidth = width;
+	m_pBmpInfoHeader->biHeight = height;
+	m_pBmpInfoHeader->biPlanes = NUM_OF_PLANES;
+	m_pBmpInfoHeader->biBitCount = BIT_COUNT_24;
+	m_pBmpInfoHeader->biCompression = BI_RGB;
+	m_pBmpInfoHeader->biSizeImage = sizeof(uncompressedImageData);
+	m_pBmpInfoHeader->biXPelsPerMeter = PIXELS_PER_METER; 
+	m_pBmpInfoHeader->biYPelsPerMeter = PIXELS_PER_METER;
+	m_pBmpInfoHeader->biClrUsed = 0;
+	m_pBmpInfoHeader->biClrImportant = 0;
+
+	m_pixels = uncompressedImageData;
+}
+
+void BMPFile::VCreateFile() const
+{
+	
+}
+
+unsigned int BMPFile::VGetWidth() const
+{
+	if (m_pBmpInfoHeader == nullptr)
+		return 0;
+	return m_pBmpInfoHeader->biWidth;
+}
+
+unsigned int BMPFile::VGetHeight() const
+{
+	if (m_pBmpInfoHeader == nullptr)
+		return 0;
+	return m_pBmpInfoHeader->biHeight;
+}
+
+unsigned int BMPFile::VGetFilesize() const
+{
+	if (m_pBmpInfoHeader == nullptr)
+		return 0;
+	return m_pBmpHeader->bfSize;
+}
+
+uint8_t * BMPFile::VGetUncompressedImageData() const
+{
+	if (m_pixels == nullptr)
+		return nullptr;
+	//Copy the image data to avoid awkward accidental deleting
+	uint8_t* ptr = nullptr;
+	memcpy(ptr, m_pixels, sizeof(m_pixels));
+	return ptr;
 }
 
 void BMPFile::initializeFailed(uint8_t * dataBuffer[], int arraySize, std::string & cause) const

@@ -45,20 +45,31 @@ typedef struct {			/**** DDS file header ****/
 
 #define DDPF_FOURCC 0x4									//Flag to show that texture contains compressed RGB data; dwFourCC contains valid data.
 #define DXT1_FOURCC (MAKEFOURCC('D', 'X', 'T', '1'))	//DXT1 value for dwfourCC
+#define FLAGS 0x81007									//DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT | DDSD_LINEARSIZE
+#define HEADER_SIZE 124									//Constant in all DDS files
+#define INFO_SIZE 32									//Constant in all DDS files
+#define DDSCAPS_TEXTURE 0x1000							//Required in DDS header
 
 class DDSFile : public IFiletype {
 public:
 	DDSFile();
 	virtual ~DDSFile();
 
-	void VInitialize(const std::string& location);
+	void VInitializeFromFile(const std::string& location);
+	void VConversionInitialize(uint8_t* uncompressedImageData, unsigned int width, unsigned int height);
+	void VCreateFile() const;
+	unsigned int VGetWidth() const;
+	unsigned int VGetHeight() const;
+	unsigned int VGetFilesize() const;
+	uint8_t* VGetUncompressedImageData() const;
 
 private:
 	DDS_HEADER* m_pDdsHeader;
 	uint8_t* m_mainData;
-	uint8_t* m_additionalData;
 
 	//Deletes object that the given pointer points at and throws exception with given message
 	void initializeFailed(uint8_t* dataBuffer, std::string& cause) const;
+	uint8_t* DXT1Compress(const uint8_t* const uncompressedData) const;
+	uint8_t* decompress() const;
 };
 
