@@ -14,12 +14,12 @@ DDSFile::DDSFile()
 DDSFile::~DDSFile()
 {
 	delete m_pDdsHeader;
-	delete m_mainData;
+	delete[] m_mainData;
 }
 
 void DDSFile::VInitializeFromFile(const std::string & location)
 {
-	uint8_t* dataBuffer = nullptr; //temp
+	uint8_t* dataBuffer = nullptr;
 
 	m_mainData = nullptr;
 	m_pDdsHeader = nullptr;
@@ -62,11 +62,9 @@ void DDSFile::VInitializeFromFile(const std::string & location)
 	//Read the main data
 	m_mainData = new uint8_t[mainImageSize];
 	file.read((char*)m_mainData, mainImageSize);
-
-	delete dataBuffer;
 }
 
-void DDSFile::VConversionInitialize(uint8_t * uncompressedImageData, unsigned int width, unsigned int height)
+void DDSFile::VConversionInitialize(uint8_t * uncompressedImageData, unsigned int imageSize, unsigned int width, unsigned int height)
 {
 	m_mainData = DXT1Compress(uncompressedImageData);
 	delete uncompressedImageData;
@@ -101,9 +99,12 @@ void DDSFile::VConversionInitialize(uint8_t * uncompressedImageData, unsigned in
 	m_pDdsHeader->dwReserved2 = 0;
 }
 
-void DDSFile::VCreateFile() const
+void DDSFile::VCreateFile(std::ofstream& outputFile) const
 {
-	//Muista dwMagic alkuun
+	outputFile.write((char*)"DDS ", sizeof(4));
+	outputFile.write((char*)&m_pDdsHeader, sizeof(DDS_HEADER));
+	outputFile.write((char*)&m_mainData, sizeof(m_mainData));
+	outputFile.close();
 }
 
 unsigned int DDSFile::VGetWidth() const
@@ -120,7 +121,7 @@ unsigned int DDSFile::VGetHeight() const
 	return m_pDdsHeader->dwHeight;
 }
 
-unsigned int DDSFile::VGetFilesize() const
+unsigned int DDSFile::VGetImageByteSize() const
 {
 	if (m_pDdsHeader == nullptr)
 		return 0;

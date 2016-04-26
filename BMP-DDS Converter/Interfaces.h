@@ -19,28 +19,29 @@ public:
 	//				 - Filetype is uninitialized
 	//Post-condition: Filetype is initialized with valid headers and image data
 	//Throws MyException if encounters an error
-	virtual void VConversionInitialize(uint8_t* uncompressedImageData, unsigned int width, unsigned int height) = 0;
+	virtual void VConversionInitialize(uint8_t* uncompressedImageData, unsigned int imageSize, unsigned int width, unsigned int height) = 0;
 
 	//Creates file with data from datastructure
-	//Pre-condition: Filetype is initialized
+	//Pre-condition: - Filetype is initialized
+	//				 - outputFile is valid filestream
 	//Post-condition: - Filetype is valid
-	//				  - A valid file based on datastructure is created to the folder where software was launched
-	virtual void VCreateFile() const = 0;
+	//				  - A valid file based on datastructure is created to the folder where software was launched from
+	virtual void VCreateFile(std::ofstream& outputFile) const = 0;
 
 	//Returns image width
 	//Pre-condition: Filetype is initialized
-	//Post-condition: Datastructure is valid
+	//Post-condition: Datastructure is in valid state
 	virtual unsigned int VGetWidth() const = 0;
 
 	//Returns image height
 	//Pre-condition: Filetype is initialized
-	//Post-condition: Datastructure is valid
+	//Post-condition: Datastructure is in valid state
 	virtual unsigned int VGetHeight() const = 0;
 
-	//Returns size of the image with header(s)
+	//Returns size of the image without header(s)
 	//Pre-condition: Filetype is initialized
-	//Post-condition: Datastructure is valid
-	virtual unsigned int VGetFilesize() const = 0;
+	//Post-condition: Datastructure is in valid state
+	virtual unsigned int VGetImageByteSize() const = 0;
 
 	//Returns const pointer to uncompressed image data (24 bits per pixel)
 	//Pre-condition: Filetype is initialized

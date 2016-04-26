@@ -16,7 +16,7 @@ BMPFile::BMPFile()
 
 BMPFile::~BMPFile()
 {
-	delete m_pixels;
+	delete[] m_pixels;
 	delete m_pBmpHeader;
 	delete m_pBmpInfoHeader;
 }
@@ -58,9 +58,10 @@ void BMPFile::VInitializeFromFile(const std::string & location)
 
 	//Check if the header shows the size of the image
 	//If the size in header is zero, use calculated value based on offset to data and file size
-	if (m_pBmpInfoHeader->biSizeImage == 0) {
+	if (imageSize == 0) {
 		std::cerr << "Warning! File " << location << " has invalid header, doesn't show size of the file" << std::endl;
 		imageSize = m_pBmpHeader->bfSize - m_pBmpHeader->bfOffBits;
+		m_pBmpInfoHeader->biSizeImage = imageSize;
 	}
 
 	// Allocate pixel memory
@@ -80,18 +81,15 @@ void BMPFile::VInitializeFromFile(const std::string & location)
 		m_pixels[i] = m_pixels[i + 2];
 		m_pixels[i + 2] = tmpRGB;
 	}
-
-	delete[] dataBuffer[0];
-	delete[] dataBuffer[1];
 }
 
-void BMPFile::VConversionInitialize(uint8_t * uncompressedImageData, unsigned int width, unsigned int height)
+void BMPFile::VConversionInitialize(uint8_t * uncompressedImageData, unsigned int imageSize, unsigned int width, unsigned int height)
 {
 	m_pBmpHeader = new BITMAPFILEHEADER();
 	m_pBmpInfoHeader = new BITMAPINFOHEADER();
 
 	m_pBmpHeader->bfType = BF_TYPE_MB;
-	m_pBmpHeader->bfSize = sizeof(uncompressedImageData) + sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
+	m_pBmpHeader->bfSize = imageSize + sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
 	m_pBmpHeader->bfReserved1 = 0;
 	m_pBmpHeader->bfReserved2 = 0;
 	m_pBmpHeader->bfOffBits = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
@@ -102,7 +100,7 @@ void BMPFile::VConversionInitialize(uint8_t * uncompressedImageData, unsigned in
 	m_pBmpInfoHeader->biPlanes = NUM_OF_PLANES;
 	m_pBmpInfoHeader->biBitCount = BIT_COUNT_24;
 	m_pBmpInfoHeader->biCompression = BI_RGB;
-	m_pBmpInfoHeader->biSizeImage = sizeof(uncompressedImageData);
+	m_pBmpInfoHeader->biSizeImage = imageSize;
 	m_pBmpInfoHeader->biXPelsPerMeter = PIXELS_PER_METER; 
 	m_pBmpInfoHeader->biYPelsPerMeter = PIXELS_PER_METER;
 	m_pBmpInfoHeader->biClrUsed = 0;
@@ -111,9 +109,17 @@ void BMPFile::VConversionInitialize(uint8_t * uncompressedImageData, unsigned in
 	m_pixels = uncompressedImageData;
 }
 
-void BMPFile::VCreateFile() const
+void BMPFile::VCreateFile(std::ofstream& outputFile) const
 {
-	
+	outputFile.write((char*)&m_pBmpHeader, sizeof(BITMAPFILEHEADER));
+	outputFile.write((char*)&m_pBmpInfoHeader, sizeof(BITMAPINFOHEADER));
+	unsigned int arraySize = VGetImageByteSize();
+	for (int i = 0; i < arraySize; ++i) {
+		outputFile.write((unsigned int)m_pixels[i], sizeof(1));
+		std::cout << (char*)*m_pixels << std::endl;
+	}
+	//outputFile.write((char*)&m_pixels, sizeof(m_pixels));
+	outputFile.close();
 }
 
 unsigned int BMPFile::VGetWidth() const
@@ -130,11 +136,11 @@ unsigned int BMPFile::VGetHeight() const
 	return m_pBmpInfoHeader->biHeight;
 }
 
-unsigned int BMPFile::VGetFilesize() const
+unsigned int BMPFile::VGetImageByteSize() const
 {
 	if (m_pBmpInfoHeader == nullptr)
 		return 0;
-	return m_pBmpHeader->bfSize;
+	return m_pBmpInfoHeader->biSizeImage;
 }
 
 uint8_t * BMPFile::VGetUncompressedImageData() const
@@ -142,8 +148,8 @@ uint8_t * BMPFile::VGetUncompressedImageData() const
 	if (m_pixels == nullptr)
 		return nullptr;
 	//Copy the image data to avoid awkward accidental deleting
-	uint8_t* ptr = nullptr;
-	memcpy(ptr, m_pixels, sizeof(m_pixels));
+	uint8_t* ptr = new uint8_t[sizeof(m_pBmpInfoHeader->biSizeImage)];
+	memcpy(ptr, m_pixels, sizeof(m_pBmpInfoHeader->biSizeImage));
 	return ptr;
 }
 

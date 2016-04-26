@@ -56,11 +56,11 @@ public:
 	virtual ~DDSFile();
 
 	void VInitializeFromFile(const std::string& location);
-	void VConversionInitialize(uint8_t* uncompressedImageData, unsigned int width, unsigned int height);
-	void VCreateFile() const;
+	void VConversionInitialize(uint8_t* uncompressedImageData, unsigned int imageSize, unsigned int width, unsigned int height);
+	void VCreateFile(std::ofstream& outputFile) const;
 	unsigned int VGetWidth() const;
 	unsigned int VGetHeight() const;
-	unsigned int VGetFilesize() const;
+	unsigned int VGetImageByteSize() const;
 	uint8_t* VGetUncompressedImageData() const;
 
 private:

@@ -16,7 +16,8 @@ int main()
 	try {
 		std::shared_ptr<IConverter> pConverter(new Converter);
 		pConverter->VLoadFile("D:\\Code Projects\\Converter\\Debug\\kode_red.bmp");
-		pConverter->VLoadFile("D:\\Code Projects\\Converter\\Debug\\dxt1_red.dds");
+		//pConverter->VLoadFile("D:\\Code Projects\\Converter\\Debug\\dxt1_red.dds");
+		pConverter->VConvert("bmp", "bmp");
 		std::string asd;
 		std::cin >> asd;
 	}
