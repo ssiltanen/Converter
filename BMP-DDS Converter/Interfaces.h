@@ -26,7 +26,7 @@ public:
 	//				 - outputFile is valid filestream
 	//Post-condition: - Filetype is valid
 	//				  - A valid file based on datastructure is created to the folder where software was launched from
-	virtual void VCreateFile(std::ofstream& outputFile) const = 0;
+	virtual void VCreateFile(std::basic_ofstream<uint8_t>& outputFile) const = 0;
 
 	//Returns image width
 	//Pre-condition: Filetype is initialized

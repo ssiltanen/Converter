@@ -117,41 +117,48 @@ std::shared_ptr<IFiletype> Converter::getUninitializedFiletype(const std::string
 	return ptr;
 }
 
-void Converter::writeFile(std::shared_ptr<IFiletype> pFiletype, const std::string & filetype) const
+void Converter::writeFile(const std::shared_ptr<IFiletype> pFiletype, const std::string & filetype) const
 {
 	std::string defaultFilename = "output";
 	int maxCount = 100;
-	std::ofstream outputFile;
+	try {
+		std::basic_ofstream<uint8_t> outputFile;
 
-	//Create unique output filename with indexing
-	for (int i = 1; i < maxCount; ++i) {
-		std::string filename = defaultFilename + std::to_string(i) + "." + filetype;
-		//Check if filename is in use
-		if (isFilenameVacant(filename)) {
-			//open ofstream with vacant filename
-			outputFile.open(filename, std::ofstream::out | std::ofstream::binary | std::ofstream::app);
-			if (outputFile.is_open()) {
-				try {
+		//Create unique output filename with indexing
+		for (int i = 1; i < maxCount; ++i) {
+			std::string filename = defaultFilename + std::to_string(i) + "." + filetype;
+			//Check if filename is in use
+			if (isFilenameVacant(filename)) {
+				//open ofstream with vacant filename
+				outputFile.open(filename, std::ofstream::out | std::ofstream::binary | std::ofstream::app);
+				if (outputFile.is_open()) {
 					//Create file
 					pFiletype->VCreateFile(outputFile);
 					//if this is reached the file creation was successful
 					std::cout << "Created file " + filename + " successfully" << std::endl;
 					return;
 				}
-				catch (MyException) {
-					throw;
-				}
+				else
+					throw MyException("Could not create output file");
 			}
-			else 
-				throw MyException("Could not create output file");
 		}
+		throw MyException("Ran out of indexes in the name for output file");
 	}
-	throw MyException("Ran out of indexes in the name for output file");
+	catch (std::ios_base::failure& e) {
+		std::string errorM = e.what();
+		throw MyException("Error writing file: " + errorM);
+	}
 }
 
 bool Converter::isFilenameVacant(const std::string & filename) const
 {
 	//Check if filename is vacant
-	std::ifstream file(filename);
-	return file.fail();
+	try {
+		std::ifstream file(filename);
+		return file.fail();
+	}
+	catch (std::ifstream::failure) {
+		return false;
+	}
+	
 }

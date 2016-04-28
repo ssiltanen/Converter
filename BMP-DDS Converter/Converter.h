@@ -32,7 +32,9 @@ private:
 	std::shared_ptr<IFiletype> getFiletype(const std::string& filetype) const;
 	//creates new filetype, adds it to the datastruture and returns pointer to it
 	std::shared_ptr<IFiletype> getUninitializedFiletype(const std::string& filetype);
-	void writeFile(std::shared_ptr<IFiletype> pFiletype, const std::string& filetype) const;
+	//Writes header info
+	void writeFile(const std::shared_ptr<IFiletype> pFiletype, const std::string& filetype) const;
+	//Checks if given filename already exists
 	bool isFilenameVacant(const std::string& filename) const;
 };
 

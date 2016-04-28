@@ -50,6 +50,14 @@ typedef struct {			/**** DDS file header ****/
 #define INFO_SIZE 32									//Constant in all DDS files
 #define DDSCAPS_TEXTURE 0x1000							//Required in DDS header
 
+#define RED_MASK 0xF800
+#define GREEN_MASK 0x7E0
+#define BLUE_MASK 0x1F
+
+#define RED_OFFSET 8
+#define GREEN_OFFSET 3
+#define BLUE_OFFSET 3
+
 class DDSFile : public IFiletype {
 public:
 	DDSFile();
@@ -57,7 +65,7 @@ public:
 
 	void VInitializeFromFile(const std::string& location);
 	void VConversionInitialize(uint8_t* uncompressedImageData, unsigned int imageSize, unsigned int width, unsigned int height);
-	void VCreateFile(std::ofstream& outputFile) const;
+	void VCreateFile(std::basic_ofstream<uint8_t>& outputFile) const;
 	unsigned int VGetWidth() const;
 	unsigned int VGetHeight() const;
 	unsigned int VGetImageByteSize() const;
@@ -67,9 +75,11 @@ private:
 	DDS_HEADER* m_pDdsHeader;
 	uint8_t* m_mainData;
 
-	//Deletes object that the given pointer points at and throws exception with given message
-	void initializeFailed(uint8_t* dataBuffer, std::string& cause) const;
+	//Returns image data in DXT1 compressed format
 	uint8_t* DXT1Compress(const uint8_t* const uncompressedData) const;
-	uint8_t* decompress() const;
+	//Transforms 32bits to sets of 8 bits
+	uint8_t* toBytes(uint32_t bits) const;
+	//Decodes 16bit rbg value to 3 bytes
+	uint8_t* decodeRGB(uint16_t color) const;
 };
 

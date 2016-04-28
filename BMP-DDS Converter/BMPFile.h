@@ -52,7 +52,7 @@ public:
 
 	void VInitializeFromFile(const std::string& location);
 	void VConversionInitialize(uint8_t* uncompressedImageData, unsigned int imageSize, unsigned int width, unsigned int height);
-	void VCreateFile(std::ofstream& outputFile) const;
+	void VCreateFile(std::basic_ofstream<uint8_t>& outputFile) const;
 	unsigned int VGetWidth() const;
 	unsigned int VGetHeight() const;
 	unsigned int VGetImageByteSize() const;
@@ -62,8 +62,5 @@ private:
 	BITMAPFILEHEADER* m_pBmpHeader;
 	BITMAPINFOHEADER* m_pBmpInfoHeader;
 	uint8_t* m_pixels;
-
-	//Deletes objects pointed by the given array of pointers and throws exception with given message
-	void initializeFailed(uint8_t* dataBuffer[], int arraySize, std::string& cause) const;
 };
 

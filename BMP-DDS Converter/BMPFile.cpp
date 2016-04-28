@@ -1,9 +1,9 @@
-#define _CRT_SECURE_NO_DEPRECATE
 #include "BMPFile.h"
+#include "MyException.h"
 
 #include <iostream>
 #include <fstream>
-#include "MyException.h"
+
 
 
 BMPFile::BMPFile()
@@ -16,7 +16,8 @@ BMPFile::BMPFile()
 
 BMPFile::~BMPFile()
 {
-	delete[] m_pixels;
+	if (m_pixels != nullptr)
+		delete[] m_pixels;
 	delete m_pBmpHeader;
 	delete m_pBmpInfoHeader;
 }
@@ -31,7 +32,7 @@ void BMPFile::VInitializeFromFile(const std::string & location)
 
 	std::ifstream file(location, std::ios::binary);
 	if (!file)
-		initializeFailed(nullptr, NULL, "Failure to open bitmap file from location: " + location);
+		throw MyException("Failure to open bitmap file from location: " + location);
 
 	// Allocate byte memory that will hold the two headers
 	dataBuffer[0] = new uint8_t[sizeof(BITMAPFILEHEADER)];
@@ -45,14 +46,14 @@ void BMPFile::VInitializeFromFile(const std::string & location)
 
 	// Check if the file is a BMP file
 	if (m_pBmpHeader->bfType != BF_TYPE_MB)
-		initializeFailed(dataBuffer, 2, "File " + location + " isn't a bitmap file");
+		throw MyException("File " + location + " isn't a bitmap file");
 
 	//Check if file is 24 bits per pixel
 	if (m_pBmpInfoHeader->biBitCount != BIT_COUNT_24)
-		initializeFailed(dataBuffer, 2, "File " + location + " isn't a 24bpp file");
+		throw MyException("File " + location + " isn't a 24bpp file");
 
 	if (m_pBmpInfoHeader->biWidth * 3 % 4 != 0 || m_pBmpInfoHeader->biHeight * 3 % 4 != 0)
-		initializeFailed(dataBuffer, 2, "File " + location + " does not have width or height divisible by 4");
+		throw MyException("File " + location + " does not have width or height divisible by 4");
 
 	unsigned int imageSize = m_pBmpInfoHeader->biSizeImage;
 
@@ -73,14 +74,6 @@ void BMPFile::VInitializeFromFile(const std::string & location)
 	//read in image data
 	//Supports only divisible by 4 width and height so no padding is needed
 	file.read((char*)m_pixels, imageSize);
-
-	//BGR format to RGB
-	for (unsigned long i = 0; i < imageSize; i += 3) { //3 bytes per pixel
-		uint8_t tmpRGB = 0;
-		tmpRGB = m_pixels[i];
-		m_pixels[i] = m_pixels[i + 2];
-		m_pixels[i + 2] = tmpRGB;
-	}
 }
 
 void BMPFile::VConversionInitialize(uint8_t * uncompressedImageData, unsigned int imageSize, unsigned int width, unsigned int height)
@@ -107,18 +100,42 @@ void BMPFile::VConversionInitialize(uint8_t * uncompressedImageData, unsigned in
 	m_pBmpInfoHeader->biClrImportant = 0;
 
 	m_pixels = uncompressedImageData;
+
+	//RGB format to BGR
+	for (unsigned long i = 0; i < imageSize; i += 3) { //3 bytes per pixel
+		uint8_t tmpRGB = 0;
+		tmpRGB = m_pixels[i];
+		m_pixels[i] = m_pixels[i + 2];
+		m_pixels[i + 2] = tmpRGB;
+	}
 }
 
-void BMPFile::VCreateFile(std::ofstream& outputFile) const
+void BMPFile::VCreateFile(std::basic_ofstream<uint8_t>& outputFile) const
 {
-	outputFile.write((char*)&m_pBmpHeader, sizeof(BITMAPFILEHEADER));
-	outputFile.write((char*)&m_pBmpInfoHeader, sizeof(BITMAPINFOHEADER));
-	unsigned int arraySize = VGetImageByteSize();
-	for (int i = 0; i < arraySize; ++i) {
-		outputFile.write((unsigned int)m_pixels[i], sizeof(1));
-		std::cout << (char*)*m_pixels << std::endl;
+	//Write headers with correct length to file
+	outputFile.write((uint8_t*)&m_pBmpHeader->bfType, 2);
+	outputFile.write((uint8_t*)&m_pBmpHeader->bfSize, 4);
+	outputFile.write((uint8_t*)&m_pBmpHeader->bfReserved1, 2);
+	outputFile.write((uint8_t*)&m_pBmpHeader->bfReserved2, 2);
+	outputFile.write((uint8_t*)&m_pBmpHeader->bfOffBits, 4);
+
+	outputFile.write((uint8_t*)&m_pBmpInfoHeader->biSize, 4);
+	outputFile.write((uint8_t*)&m_pBmpInfoHeader->biWidth, 4);
+	outputFile.write((uint8_t*)&m_pBmpInfoHeader->biHeight, 4);
+	outputFile.write((uint8_t*)&m_pBmpInfoHeader->biPlanes, 2);
+	outputFile.write((uint8_t*)&m_pBmpInfoHeader->biBitCount, 2);
+	outputFile.write((uint8_t*)&m_pBmpInfoHeader->biCompression, 4);
+	outputFile.write((uint8_t*)&m_pBmpInfoHeader->biSizeImage, 4);
+	outputFile.write((uint8_t*)&m_pBmpInfoHeader->biXPelsPerMeter, 4);
+	outputFile.write((uint8_t*)&m_pBmpInfoHeader->biYPelsPerMeter, 4);
+	outputFile.write((uint8_t*)&m_pBmpInfoHeader->biClrUsed, 4);
+	outputFile.write((uint8_t*)&m_pBmpInfoHeader->biClrImportant, 4);
+
+	//image data
+	unsigned int arraySize = m_pBmpInfoHeader->biSizeImage;
+	for (unsigned int i = 0; i < arraySize; ++i) {
+		outputFile.write((uint8_t*)&m_pixels[i], 1);
 	}
-	//outputFile.write((char*)&m_pixels, sizeof(m_pixels));
 	outputFile.close();
 }
 
@@ -148,17 +165,16 @@ uint8_t * BMPFile::VGetUncompressedImageData() const
 	if (m_pixels == nullptr)
 		return nullptr;
 	//Copy the image data to avoid awkward accidental deleting
-	uint8_t* ptr = new uint8_t[sizeof(m_pBmpInfoHeader->biSizeImage)];
-	memcpy(ptr, m_pixels, sizeof(m_pBmpInfoHeader->biSizeImage));
-	return ptr;
-}
+	uint8_t* ptr = new uint8_t[m_pBmpInfoHeader->biSizeImage];
+	memcpy(ptr, m_pixels, m_pBmpInfoHeader->biSizeImage);
 
-void BMPFile::initializeFailed(uint8_t * dataBuffer[], int arraySize, std::string & cause) const
-{
-	if (dataBuffer != nullptr) {
-		for (int i = 0; i < arraySize; ++i) {
-			delete dataBuffer[i];
-		}
+	//BGR format to RGB
+	unsigned int imageSize = m_pBmpInfoHeader->biSizeImage;
+	for (unsigned long i = 0; i < imageSize; i += 3) { //3 bytes per pixel
+		uint8_t tmpRGB = 0;
+		tmpRGB = ptr[i];
+		ptr[i] = ptr[i + 2];
+		ptr[i + 2] = tmpRGB;
 	}
-	throw MyException(cause);
+	return ptr;
 }
