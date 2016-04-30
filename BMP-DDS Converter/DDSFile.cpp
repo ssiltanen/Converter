@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 #include <algorithm>
+#include <vector>
 
 DDSFile::DDSFile()
 {
@@ -164,27 +165,27 @@ uint8_t * DDSFile::VGetUncompressedImageData() const
 	if (m_mainData == nullptr)
 		return nullptr;
 
-	
 	const unsigned int width = m_pDdsHeader->dwWidth;
 	const unsigned int height = m_pDdsHeader->dwHeight;
+
 	uint8_t* bytesBuffer = new uint8_t[width * height * 3];
-
-
-	int i = 0;
-	for (unsigned int y = 0; y < height; y += 4) {
-		for (unsigned int x = 0; x < width; x += 4) {
+	int byteBufferCount = 0;
+	
+	int index = 0;
+	for (unsigned int y = 0; y < height / 4; ++y) {
+		std::vector<Block> blockRow;
+		for (unsigned int x = 0; x < width / 4; ++x) {
 			//Get bytes of 2 reference colors and 4x4 blocks of texels
-			uint8_t c0_lo = m_mainData[i++];
-			uint8_t c0_hi = m_mainData[i++];
-			uint8_t c1_lo = m_mainData[i++];
-			uint8_t c1_hi = m_mainData[i++];
-			uint8_t bits_0 = m_mainData[i++];
-			uint8_t bits_1 = m_mainData[i++];
-			uint8_t bits_2 = m_mainData[i++];
-			uint8_t bits_3 = m_mainData[i++];
+			uint8_t c0_lo = m_mainData[index++];
+			uint8_t c0_hi = m_mainData[index++];
+			uint8_t c1_lo = m_mainData[index++];
+			uint8_t c1_hi = m_mainData[index++];
 
-			//Calculate pixels into one 32 bit variable
-			uint32_t bits = bits_0 + 256 * (bits_1 + 256 * (bits_2 + 256 * bits_3));
+			uint8_t codeBits[4]; //holds 4 bytes of 2bit sets (1 code = 2bits)
+			codeBits[0] = m_mainData[index++];
+			codeBits[1] = m_mainData[index++];
+			codeBits[2] = m_mainData[index++];
+			codeBits[3] = m_mainData[index++];
 
 			//Calculate the four colors used
 			uint16_t color0 = (c0_lo + c0_hi * 256);
@@ -202,43 +203,45 @@ uint8_t * DDSFile::VGetUncompressedImageData() const
 				color3 = 0; //transparent black  
 			}
 
-			//Cut texel bits to bytes
-			uint8_t* texesBytes = toBytes(bits);
-
 			//Decode texel bits (2bits per pixel) and then get the decoded rgb value to that pixel
+			Block block;
 			for (int yi = 0; yi < 4; ++yi) {
 				for (int xi = 0, maskCounter = 3; xi < 4; ++xi, maskCounter *= 4) {
-					uint8_t* block = nullptr;
-					uint8_t code = (texesBytes[yi] & maskCounter) >> 2 * xi;
+					uint8_t code = (codeBits[yi] & maskCounter) >> 2 * xi;
 					switch (code) {
 					case 0:
-						block = decodeRGB(color0);
+						block.blockData[yi][xi] = decodeRGB(color0);
 						break;
 					case 1:
-						block = decodeRGB(color1);
+						block.blockData[yi][xi] = decodeRGB(color1);
 						break;
 					case 2:
-						block = decodeRGB(color2);
+						block.blockData[yi][xi] = decodeRGB(color2);
 						break;
 					case 3:
-						block = decodeRGB(color3);
+						block.blockData[yi][xi] = decodeRGB(color3);
 						break;
 					default:
 						std::cerr << "Unknown value for texel color code" << std::endl;
 					}
-					//Calculate the color byte positions in rgb buffer
-					unsigned int redOrderInBuffer = ((y + yi) * width + x * 4 + xi) * 3;
-					unsigned int greenOrderInBuffer = 1 + ((y + yi) * width + x * 4 + xi) * 3;
-					unsigned int blueOrderInBuffer = 2 + ((y + yi) * width + x * 4 + xi) * 3;
-					bytesBuffer[redOrderInBuffer] = block[0];
-					bytesBuffer[greenOrderInBuffer] = block[1];
-					bytesBuffer[blueOrderInBuffer] = block[2];
-					delete[] block;
 				}
 			}
-			delete[] texesBytes;
+			//Add block with decoded rgb bytes to blockRow
+			blockRow.push_back(block);
+		}
+		//Process block row 
+		for (int h = 0; h < 4; ++h) { //row counter inside a block
+			for (int j = 0; j < blockRow.size(); ++j) { //block counter
+				for (int k = 0; k < 4; ++k) { //pixel counter in a row of a block
+					bytesBuffer[byteBufferCount++] = blockRow.at(j).blockData[h][k][0]; //red
+					bytesBuffer[byteBufferCount++] = blockRow.at(j).blockData[h][k][1]; //green
+					bytesBuffer[byteBufferCount++] = blockRow.at(j).blockData[h][k][2]; //blue
+				}
+			}
 		}
 	}
+
+	//returns linear representation of rgb bytes
 	return bytesBuffer;
 }
 
@@ -266,8 +269,6 @@ uint8_t* DDSFile::decodeRGB(uint16_t color) const {
 	rgb[0] = (color & RED_MASK) >> RED_OFFSET;
 	rgb[1] = (color & GREEN_MASK) >> GREEN_OFFSET;
 	rgb[2] = (color & BLUE_MASK) << BLUE_OFFSET;
-	//for (unsigned long i = 0; i < imageSize; i += 3) { //3 bytes per pixel
-		std::cout << (unsigned int)rgb[0] << (unsigned int)rgb[1] << (unsigned int)rgb[2] << std::endl;
-	//}
+
 	return rgb;
 }

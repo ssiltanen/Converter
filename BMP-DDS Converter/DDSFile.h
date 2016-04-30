@@ -58,6 +58,10 @@ typedef struct {			/**** DDS file header ****/
 #define GREEN_OFFSET 3
 #define BLUE_OFFSET 3
 
+typedef struct {
+	uint8_t* blockData[4][4];
+} Block;
+
 class DDSFile : public IFiletype {
 public:
 	DDSFile();
