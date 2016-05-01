@@ -80,9 +80,10 @@ private:
 	uint8_t* m_mainData;
 
 	//Returns image data in DXT1 compressed format
-	uint8_t* DXT1Compress(const uint8_t* const uncompressedData) const;
+	uint8_t* DXT1Compress(const uint8_t* const uncompressedData, const unsigned int compressedImageSize, 
+							const unsigned int imageSize, const unsigned int width, const unsigned int height) const;
 	//Transforms 32bits to sets of 8 bits
-	uint8_t* toBytes(uint32_t bits) const;
+	uint8_t* toBytes(const uint32_t bits) const;
 	//Decodes 16bit rbg value to 3 bytes
 	uint8_t* decodeRGB(uint16_t color) const;
 };
