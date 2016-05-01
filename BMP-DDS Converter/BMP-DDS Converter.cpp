@@ -21,9 +21,11 @@ int main()
 {
 	try {
 		std::cout << "File converter by Sampo Siltanen - 2016 \n"
-			<< "Currently supported filetypes: bmp, dds \n \n"
+			<< "Currently supported filetypes: DDS (DXT1/BC1) and BMP (24 bits per pixel) \n \n"
 			<< "Commands: \n"
-			<< "L <filepath> or <filename> if file is in current folder \n"
+			<< "L {<filepath> | <filename>} \n"
+			<< "\t - If filename is used, it has to be in current folder \n"
+			<< "\t - If filepath is used, '\\' must be typed in double '\\\\' \n"
 			<< "\t - Loads file to datastructure \n \n"
 			<< "C <filetype1> <filetype2> \n"
 			<< "\t - Creates copy of filetype1 and converts it to filetype2. \n"

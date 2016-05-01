@@ -254,7 +254,7 @@ uint8_t * DDSFile::DXT1Compress(const uint8_t* const uncompressedData, const uns
 	unsigned int imageDataIndex = 0;
 	std::vector<std::vector<Block>> blockMatrice;
 
-	//Loop through uncompressed data and form matrice of 4x4 blocks of it
+	//Loop through uncompressed data and form matrices of 4x4 blocks of it
 	unsigned int index = 0;
 	while (index < imageSize) { //Go through all bytes of image
 		std::vector<Block> blockRow;
@@ -265,8 +265,9 @@ uint8_t * DDSFile::DXT1Compress(const uint8_t* const uncompressedData, const uns
 					Block b;
 					blockRow.push_back(b);
 				}
+				//read pixel data
 				for (unsigned int pixelNum = 0; pixelNum < 4; ++pixelNum) { //4 pixels in a row
-					uint8_t rgb[3];
+					uint8_t* rgb = new uint8_t[3];
 					rgb[0] = uncompressedData[index++];
 					rgb[1] = uncompressedData[index++];
 					rgb[2] = uncompressedData[index++];
@@ -284,8 +285,8 @@ uint8_t * DDSFile::DXT1Compress(const uint8_t* const uncompressedData, const uns
 			//Count the reference colors for a block
 			//think of pixel rgb as a 3d vector -> calculate max and min vector
 			Block currentBlock = blockMatrice.at(y).at(x);
-			unsigned int max = 0;
-			unsigned int min = 0;
+			double max = 0;	//initialized with min value
+			double min = 442;	//initialized with max value
 			uint8_t maxRgb[3] = { 0, 0, 0 }; //color0
 			uint8_t minRgb[3] = {255, 255, 255}; //color3
 			for (unsigned int row = 0; row < 4; ++row) {
@@ -318,21 +319,25 @@ uint8_t * DDSFile::DXT1Compress(const uint8_t* const uncompressedData, const uns
 			}
 
 			//form the 4 first bytes from reference colors
-			imageData[imageDataIndex++] = (maxRgb[1] & 7) << 5 | (maxRgb[2] & 248) >> 3; //c0_lo
-			imageData[imageDataIndex++] = (maxRgb[0] & 248) | (maxRgb[1] & 224) >> 3; //c0_hi
-			imageData[imageDataIndex++] = (minRgb[1] & 7) << 5 | (minRgb[2] & 248) >> 3; //c1_lo
-			imageData[imageDataIndex++] = (minRgb[0] & 248) | (minRgb[1] & 224) >> 3; //c1_hi
+			//								green 3 bits			blue 5 bits
+			imageData[imageDataIndex++] = ((maxRgb[1] & 7) << 5) | ((maxRgb[2] & 248) >> 3);	//c0_lo
+			//								red 5 bits			green 3 bits
+			imageData[imageDataIndex++] = (maxRgb[0] & 248) | ((maxRgb[1] & 224) >> 3);			//c0_hi
+			imageData[imageDataIndex++] = ((minRgb[1] & 7) << 5 | (minRgb[2] & 248) >> 3);		//c1_lo
+			imageData[imageDataIndex++] = ((minRgb[0] & 248) | (minRgb[1] & 224) >> 3);			//c1_hi
 
 			//find the other 2 colors in between min and max
 			//2 out of 3 the length of deduction of min and max
-			uint8_t color1[3] = { (maxRgb[0] - minRgb[0]) / 3 * 2, (maxRgb[1] - minRgb[1]) / 3 * 2, (maxRgb[2] - minRgb[2]) / 3 * 2 };
+			uint8_t color1[3] = { (maxRgb[0] - minRgb[0]) / 3 * 2, 
+									(maxRgb[1] - minRgb[1]) / 3 * 2, 
+									(maxRgb[2] - minRgb[2]) / 3 * 2 };
 			//1 out of 3 the length of deduction of min and max
-			uint8_t color2[3] = { (maxRgb[0] - minRgb[0]) / 3, (maxRgb[1] - minRgb[1]) / 3, (maxRgb[2] - minRgb[2]) / 3 };
+			uint8_t color2[3] = { (maxRgb[0] - minRgb[0]) / 3, 
+									(maxRgb[1] - minRgb[1]) / 3, 
+									(maxRgb[2] - minRgb[2]) / 3 };
 
 			//map pixel colors to reference colors
-			unsigned int codes[16];
 			uint8_t codeByte = 0;
-			unsigned int codeOrder = 0;
 			for (unsigned int row = 0; row < 4; ++row) {
 				for (unsigned int column = 0; column < 4; ++column) {
 					//code 0 is default
@@ -359,9 +364,9 @@ uint8_t * DDSFile::DXT1Compress(const uint8_t* const uncompressedData, const uns
 							}
 						}
 					}
+					delete[] currentBlock.blockData[row][column];
 					//Form byte of 2 bit codes, pixels a to e are in order MSB e -> a LSB
 					codeByte = codeByte | (code & 3) << 2 * column;
-					codes[codeOrder++] = code; //debug purposes
 				}
 				imageData[imageDataIndex++] = codeByte;
 			}

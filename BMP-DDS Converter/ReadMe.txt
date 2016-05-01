@@ -2,39 +2,59 @@
     CONSOLE APPLICATION : BMP-DDS Converter Project Overview
 ========================================================================
 
-AppWizard has created this BMP-DDS Converter application for you.
+Sampo Siltanen 
+2016
 
-This file contains a summary of what you will find in each of the files that
-make up your BMP-DDS Converter application.
+This software works as a image file converter. At the moment the supported filetypes are 
+DDS (DXT1/BC1) and BMP (24 bits per pixel).
+
+Commands:
+L {<filename> | <file location>}
+	- Filename can be used if the file is in the same folder,
+	- file location needs '\' to be typed in double like '\\'
+
+C <from filetype> <target filetype>
+	- Converts previously loaded <from filetype> and creates a <target filetype> output file
+	
+Q
+	- Closes program
 
 
 BMP-DDS Converter.vcxproj
-    This is the main project file for VC++ projects generated using an Application Wizard.
-    It contains information about the version of Visual C++ that generated the file, and
-    information about the platforms, configurations, and project features selected with the
-    Application Wizard.
-
 BMP-DDS Converter.vcxproj.filters
-    This is the filters file for VC++ projects generated using an Application Wizard. 
-    It contains information about the association between the files in your project 
-    and the filters. This association is used in the IDE to show grouping of files with
-    similar extensions under a specific node (for e.g. ".cpp" files are associated with the
-    "Source Files" filter).
+	Visual studio project files.
 
 BMP-DDS Converter.cpp
     This is the main application source file.
 
-/////////////////////////////////////////////////////////////////////////////
-Other standard files:
+Interfaces.h
+	Collection of interfaces in the software.
 
-StdAfx.h, StdAfx.cpp
-    These files are used to build a precompiled header (PCH) file
-    named BMP-DDS Converter.pch and a precompiled types file named StdAfx.obj.
+BMPFile.h & .cpp
+	BMP filetype that implements IFiletype interface (see interfaces.h)
 
-/////////////////////////////////////////////////////////////////////////////
-Other notes:
 
-AppWizard uses "TODO:" comments to indicate parts of the source code you
-should add to or customize.
+DDSFile.h & .cpp
+	DDS filetype that implements IFiletype interface (see interfaces.h)
 
-/////////////////////////////////////////////////////////////////////////////
+Converter.h & .cpp
+	Class that implements IConverter interface (see interfaces.h). This class is designed so that 
+	it doesn't care what filetypes it is converting. New filetypes can be added with little work.
+
+MyException.h
+	Custom exception class to send messages when errors happen
+	
+Smiley.dds & .bmp
+	example files used
+	
+	
+	
+Known issues:
+	- When converting big files, there are performance issues
+	
+	
+Known bugs:
+	- Converting from dds to bmp or bmp to dds turns the picture upsidedown.
+	- Converting from bmp to dds adds red layer
+	- Converting from dds to bmp some certain colors changes
+	- Highly detailed files does not convert properly
