@@ -50,9 +50,9 @@ typedef struct {			/**** DDS file header ****/
 #define INFO_SIZE 32									//Constant in all DDS files
 #define DDSCAPS_TEXTURE 0x1000							//Required in DDS header
 
-#define RED_MASK 0xF800
-#define GREEN_MASK 0x7E0
-#define BLUE_MASK 0x1F
+#define RED_MASK 63488
+#define GREEN_MASK 2016
+#define BLUE_MASK 31
 
 #define RED_OFFSET 8
 #define GREEN_OFFSET 3
