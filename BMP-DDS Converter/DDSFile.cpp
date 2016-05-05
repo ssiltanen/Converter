@@ -211,7 +211,7 @@ uint8_t * DDSFile::VGetUncompressedImageData() const
 			//yi and xi are inverted because otherwise image ends up upside down
 			for (int yi = 3, codeCounter = 0; yi >= 0; --yi) {
 				for (int xi = 0, maskCounter = 3; xi < 4; ++xi, maskCounter *= 4) {
-					uint8_t code = (codeBits[codeCounter] & maskCounter) >> 2 * xi;
+					uint8_t code = (codeBits[codeCounter] >> (2 * xi) & 3);
 					switch (code) {
 					case 0:
 						block.blockData[yi][xi] = decodeRGB(color0);
@@ -237,11 +237,11 @@ uint8_t * DDSFile::VGetUncompressedImageData() const
 	}
 
 	//Process matrice
-	unsigned int rowCount = blockMatrice.size();
-	for (unsigned int blockRowNum = 0; blockRowNum < rowCount; ++blockRowNum) { //loop matrice rows
+	size_t rowCount = blockMatrice.size();
+	for (size_t blockRowNum = 0; blockRowNum < rowCount; ++blockRowNum) { //loop matrice rows
 		for (int row = 0; row < 4; ++row) { //row counter inside a block
-			unsigned int blockCount = blockMatrice.at(blockRowNum).size();
-			for (int j = 0; j < blockCount; ++j) { //block counter
+			size_t blockCount = blockMatrice.at(blockRowNum).size();
+			for (size_t j = 0; j < blockCount; ++j) { //block counter
 				for (int column = 0; column < 4; ++column) { //pixel counter in a row of a block
 					bytesBuffer[byteBufferCount++] = blockMatrice.at(blockRowNum).at(j).blockData[row][column][0]; //red
 					bytesBuffer[byteBufferCount++] = blockMatrice.at(blockRowNum).at(j).blockData[row][column][1]; //green
@@ -292,28 +292,28 @@ uint8_t * DDSFile::DXT1Compress(const uint8_t* const uncompressedData, const uns
 		for (unsigned int x = 0; x < blockMatrice.at(y).size(); ++x) {
 
 			//Count the reference colors for a block
-			//think of pixel rgb as a 3d vector -> calculate max and min vector
 			Block currentBlock = blockMatrice.at(y).at(x);
-			double max = 0;	//initialized with min value
-			double min = 442;	//initialized with max value
+			uint16_t min16 = 65535; //initialized with max value
+			uint16_t max16 = 0;		//initialized with min value
 			uint8_t maxRgb[3] = { 0, 0, 0 };		//color0
 			uint8_t minRgb[3] = {255, 255, 255};	//color1
 			for (unsigned int row = 0; row < 4; ++row) {
 				for (unsigned int column = 0; column < 4; ++column) {
-					//calculate "vector" length
-					double length = sqrt(pow(currentBlock.blockData[row][column][0], 2) 
-										+ pow(currentBlock.blockData[row][column][1], 2) 
-										+ pow(currentBlock.blockData[row][column][2], 2));
+					//calculate 16 bit representation of current color
+					uint8_t colorLo = ((currentBlock.blockData[row][column][1] & 7) << 5) | ((currentBlock.blockData[row][column][2] & 248) >> 3);																				//								red 5 bits			green 3 bits
+					uint8_t colorHi = (currentBlock.blockData[row][column][0] & 248) | ((currentBlock.blockData[row][column][1] & 224) >> 5);
+					uint16_t color16 = colorLo + colorHi * 256;
+
 					//save the value if it is the biggest so far
-					if (length > max) {
-						max = length;
+					if (color16 > max16) {
+						max16 = color16;
 						maxRgb[0] = currentBlock.blockData[row][column][0];
 						maxRgb[1] = currentBlock.blockData[row][column][1];
 						maxRgb[2] = currentBlock.blockData[row][column][2];
 					}
 					//save the value if it is the smallest so far
-					if (length < min) {
-						min = length;
+					if (color16 < min16) {
+						min16 = color16;
 						minRgb[0] = currentBlock.blockData[row][column][0];
 						minRgb[1] = currentBlock.blockData[row][column][1];
 						minRgb[2] = currentBlock.blockData[row][column][2];
@@ -329,61 +329,60 @@ uint8_t * DDSFile::DXT1Compress(const uint8_t* const uncompressedData, const uns
 			imageData[imageDataIndex++] = ((minRgb[1] & 7) << 5 | (minRgb[2] & 248) >> 3);		//c1_lo
 			imageData[imageDataIndex++] = ((minRgb[0] & 248) | (minRgb[1] & 224) >> 5);			//c1_hi
 
-			//find the other 2 colors in between min and max
-			uint8_t color2[3];
-			uint8_t color3[3];			
-			if (max > min) {
+			uint8_t color2[3] = { 0,0,0 };
+			uint8_t color3[3] = { 0,0,0 };
+			if (max16 > min16) {
 				color2[0] = (2 * maxRgb[0] + minRgb[0]) / 3;
 				color2[1] = (2 * maxRgb[1] + minRgb[1]) / 3;
 				color2[2] = (2 * maxRgb[2] + minRgb[2]) / 3;
 
-				color3[0] = (maxRgb[0] + 2 * minRgb[0]) / 3;
-				color3[1] = (maxRgb[1] + 2 * minRgb[1]) / 3;
-				color3[2] = (maxRgb[2] + 2 * minRgb[2]) / 3;
+				color3[0] = (maxRgb[0] + minRgb[0] * 2) / 3;
+				color3[1] = (maxRgb[1] + minRgb[1] * 2) / 3;
+				color3[2] = (maxRgb[2] + minRgb[2] * 2) / 3;
 			}
 			else {
 				color2[0] = (maxRgb[0] + minRgb[0]) / 2;
 				color2[1] = (maxRgb[1] + minRgb[1]) / 2;
 				color2[2] = (maxRgb[2] + minRgb[2]) / 2;
-
-				color3[0] = 0;
-				color3[1] = 0;
-				color3[2] = 0;
 			}
+
 
 			//map pixel colors to reference colors
 			uint8_t codeByte = 0;
 			for (unsigned int row = 0; row < 4; ++row) {
 				for (unsigned int column = 0; column < 4; ++column) {
-					//code 0 is default
-					unsigned int code = 0;
-					double distance1 = sqrt(pow(maxRgb[0] - currentBlock.blockData[row][column][0], 2) 
+					int code = 0;
+					double distanceCo0 = sqrt(pow(maxRgb[0] - currentBlock.blockData[row][column][0], 2)
 											+ pow(maxRgb[1] - currentBlock.blockData[row][column][1], 2)
 											+ pow(maxRgb[2] - currentBlock.blockData[row][column][2], 2));
-					double distance2 = sqrt(pow(color2[0] - currentBlock.blockData[row][column][0], 2)
+
+					double distanceCo2 = sqrt(pow(color2[0] - currentBlock.blockData[row][column][0], 2)
 											+ pow(color2[1] - currentBlock.blockData[row][column][1], 2)
 											+ pow(color2[2] - currentBlock.blockData[row][column][2], 2));
 					//if color is closer to the second color there is no need to compare color0 again
-					if (distance1 > distance2) {
-						code = 1;
-						distance1 = sqrt(pow(color3[0] - currentBlock.blockData[row][column][0], 2)
-										+ pow(color3[1] - currentBlock.blockData[row][column][1], 2)
-										+ pow(color3[2] - currentBlock.blockData[row][column][2], 2));
-						if (distance2 > distance1) {
-							code = 2;
-							distance2 = sqrt(pow(minRgb[0] - currentBlock.blockData[row][column][0], 2)
-											+ pow(minRgb[1] - currentBlock.blockData[row][column][1], 2)
-											+ pow(minRgb[2] - currentBlock.blockData[row][column][2], 2));
-							if (distance1 > distance2) {
-								code = 3;
+					if (distanceCo0 > distanceCo2) {
+						code = 2;
+						double distanceCo3 = sqrt(pow(color3[0] - currentBlock.blockData[row][column][0], 2)
+												+ pow(color3[1] - currentBlock.blockData[row][column][1], 2)
+												+ pow(color3[2] - currentBlock.blockData[row][column][2], 2));
+
+						if (distanceCo2 > distanceCo3) {
+							code = 3;
+							double distanceCo1 = sqrt(pow(minRgb[0] - currentBlock.blockData[row][column][0], 2)
+													+ pow(minRgb[1] - currentBlock.blockData[row][column][1], 2)
+													+ pow(minRgb[2] - currentBlock.blockData[row][column][2], 2));
+
+							if (distanceCo3 > distanceCo1) {
+								code = 1;
 							}
 						}
 					}
 					delete[] currentBlock.blockData[row][column];
 					//Form byte of 2 bit codes, pixels a to e are in order MSB e -> a LSB
-					codeByte = codeByte | (code & 3) << 2 * column;
+					codeByte = (codeByte | (uint8_t)((code & 3) << 2 * column));
 				}
 				imageData[imageDataIndex++] = codeByte;
+				codeByte = 0;
 			}
 		}
 	}
