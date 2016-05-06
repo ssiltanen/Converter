@@ -74,6 +74,14 @@ void BMPFile::VInitializeFromFile(const std::string & location)
 	//read in image data
 	//Supports only divisible by 4 width and height so no padding is needed
 	file.read((char*)m_pixels, imageSize);
+
+	//BGR format to RGB
+	for (unsigned long i = 0; i < imageSize; i += 3) { //3 bytes per pixel
+		uint8_t tmpRGB = 0;
+		tmpRGB = m_pixels[i];
+		m_pixels[i] = m_pixels[i + 2];
+		m_pixels[i + 2] = tmpRGB;
+	}
 }
 
 void BMPFile::VConversionInitialize(uint8_t * uncompressedImageData, unsigned int imageSize, unsigned int width, unsigned int height)
@@ -100,14 +108,6 @@ void BMPFile::VConversionInitialize(uint8_t * uncompressedImageData, unsigned in
 	m_pBmpInfoHeader->biClrImportant = 0;
 
 	m_pixels = uncompressedImageData;
-
-	//RGB format to BGR
-	for (unsigned long i = 0; i < imageSize; i += 3) { //3 bytes per pixel
-		uint8_t tmpRGB = 0;
-		tmpRGB = m_pixels[i];
-		m_pixels[i] = m_pixels[i + 2];
-		m_pixels[i + 2] = tmpRGB;
-	}
 }
 
 void BMPFile::VCreateFile(std::basic_ofstream<uint8_t>& outputFile) const
@@ -131,12 +131,27 @@ void BMPFile::VCreateFile(std::basic_ofstream<uint8_t>& outputFile) const
 	outputFile.write((uint8_t*)&m_pBmpInfoHeader->biClrUsed, 4);
 	outputFile.write((uint8_t*)&m_pBmpInfoHeader->biClrImportant, 4);
 
+	//Copy data to change the order
+	unsigned int imageSize = m_pBmpInfoHeader->biSizeImage;
+	uint8_t* pCopy = new uint8_t[imageSize];
+	memcpy(pCopy, m_pixels, imageSize);
+
+	//RGB format to BGR
+	for (unsigned long i = 0; i < imageSize; i += 3) { //3 bytes per pixel
+		uint8_t tmpRGB = 0;
+		tmpRGB = pCopy[i];
+		pCopy[i] = pCopy[i + 2];
+		pCopy[i + 2] = tmpRGB;
+	}
+
 	//image data
 	unsigned int arraySize = m_pBmpInfoHeader->biSizeImage;
 	for (unsigned int i = 0; i < arraySize; ++i) {
-		outputFile.write((uint8_t*)&m_pixels[i], 1);
+		outputFile.write((uint8_t*)&pCopy[i], 1);
 	}
 	outputFile.close();
+
+	delete[] pCopy;
 }
 
 unsigned int BMPFile::VGetWidth() const
@@ -164,17 +179,10 @@ uint8_t * BMPFile::VGetUncompressedImageData() const
 {
 	if (m_pixels == nullptr)
 		return nullptr;
-	//Copy the image data to avoid awkward accidental deleting
-	uint8_t* ptr = new uint8_t[m_pBmpInfoHeader->biSizeImage];
-	memcpy(ptr, m_pixels, m_pBmpInfoHeader->biSizeImage);
 
-	//BGR format to RGB
-	unsigned int imageSize = m_pBmpInfoHeader->biSizeImage;
-	for (unsigned long i = 0; i < imageSize; i += 3) { //3 bytes per pixel
-		uint8_t tmpRGB = 0;
-		tmpRGB = ptr[i];
-		ptr[i] = ptr[i + 2];
-		ptr[i + 2] = tmpRGB;
-	}
-	return ptr;
+	//Copy the image data to avoid awkward accidental deleting
+	uint8_t* pCopy = new uint8_t[m_pBmpInfoHeader->biSizeImage];
+	memcpy(pCopy, m_pixels, m_pBmpInfoHeader->biSizeImage);
+
+	return pCopy;
 }

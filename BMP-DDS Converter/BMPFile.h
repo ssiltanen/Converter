@@ -61,6 +61,6 @@ public:
 private:
 	BITMAPFILEHEADER* m_pBmpHeader;
 	BITMAPINFOHEADER* m_pBmpInfoHeader;
-	uint8_t* m_pixels;
+	uint8_t* m_pixels; //RGB format
 };
 
