@@ -170,88 +170,106 @@ uint8_t * DDSFile::VGetUncompressedImageData() const
 	const unsigned int width = m_pDdsHeader->dwWidth;
 	const unsigned int height = m_pDdsHeader->dwHeight;
 
+	//Allocate memory for uncompressed image data, width * height * 3 color bytes per pixel
 	uint8_t* bytesBuffer = new uint8_t[width * height * 3];
-	int byteBufferCount = 0;
-	
-	int index = 0;
-	std::deque<std::deque<Block>> blockMatrice;
-	for (unsigned int y = 0; y < height / 4; ++y) {
-		std::deque<Block> blockRow;
-		for (unsigned int x = 0; x < width / 4; ++x) {
-			//Get bytes of 2 reference colors and 4x4 blocks of texels
-			uint8_t c0_lo = m_mainData[index++];
-			uint8_t c0_hi = m_mainData[index++];
-			uint8_t c1_lo = m_mainData[index++];
-			uint8_t c1_hi = m_mainData[index++];
 
-			uint8_t codeBits[4]; //holds 4 bytes of 2bit sets (1 code = 2bits)
-			codeBits[0] = m_mainData[index++];
-			codeBits[1] = m_mainData[index++];
-			codeBits[2] = m_mainData[index++];
-			codeBits[3] = m_mainData[index++];
+	unsigned int index = 0;
+	//uses inverted order in y so that image is represented the correct way, otherwise it would end up upside down
+	for (int invertY = height / 4 - 1; invertY >= 0; --invertY) {
+		for (unsigned int x = 0; x < width / 4; ++x) {
+
+			//Read block reference colors
+			const uint8_t c0_lo = m_mainData[index++];
+			const uint8_t c0_hi = m_mainData[index++];
+			const uint8_t c1_lo = m_mainData[index++];
+			const uint8_t c1_hi = m_mainData[index++];
+
+			//Read block pixel codes
+			const uint8_t bits_0 = m_mainData[index++];
+			const uint8_t bits_1 = m_mainData[index++];
+			const uint8_t bits_2 = m_mainData[index++];
+			const uint8_t bits_3 = m_mainData[index++];
+
+			//Form 32 bit instance of block bits
+			const uint32_t bits = bits_0 + 256 * (bits_1 + 256 * (bits_2 + 256 * bits_3));
 
 			//Calculate the four colors used
-			uint16_t color0 = c0_lo + c0_hi * 256;
-			uint16_t color1 = c1_lo + c1_hi * 256;
-			uint16_t color2 = color0;
-			uint16_t color3 = color0;
+			uint16_t co0 = c0_lo + c0_hi * 256;
+			uint16_t co1 = c1_lo + c1_hi * 256;
 
-			//Define the order of colors
-			if (color0 > color1) {
-				color2 = ((2 * color0 + color1) / 3);
-				color3 = ((color0 + 2 * color1) / 3);
+			//Decode rgb values
+			uint8_t* color0Rgb = decodeRGB(co0);
+			uint8_t* color1Rgb = decodeRGB(co1);
+			uint8_t* color2Rgb = new uint8_t[3];
+			uint8_t* color3Rgb = new uint8_t[3];
+
+			//Interpolate mid colors
+			if (co0 > co1) {
+				color2Rgb[0] = (2 * color0Rgb[0] + color1Rgb[0]) / 3;
+				color2Rgb[1] = (2 * color0Rgb[1] + color1Rgb[1]) / 3;
+				color2Rgb[2] = (2 * color0Rgb[2] + color1Rgb[2]) / 3;
+
+				color3Rgb[0] = (color0Rgb[0] + 2 * color1Rgb[0]) / 3;
+				color3Rgb[1] = (color0Rgb[1] + 2 * color1Rgb[1]) / 3;
+				color3Rgb[2] = (color0Rgb[2] + 2 * color1Rgb[2]) / 3;
 			}
-			else {
-				color2 = ((color0 + color1) / 2);
-				color3 = 0; //transparent black  
+			else { //Uses third color as alpha value
+				color2Rgb[0] = (color0Rgb[0] + color1Rgb[0]) / 2;
+				color2Rgb[1] = (color0Rgb[1] + color1Rgb[1]) / 2;
+				color2Rgb[2] = (color0Rgb[2] + color1Rgb[2]) / 2;
+
+				color3Rgb[0] = 0;
+				color3Rgb[1] = 0;
+				color3Rgb[2] = 0;
 			}
 
-			//Decode texel bits (2bits per pixel) and then get the decoded rgb value to that pixel
-			Block block;
-			//yi and xi are inverted because otherwise image ends up upside down
-			for (int yi = 3, codeCounter = 0; yi >= 0; --yi) {
-				for (int xi = 0, maskCounter = 3; xi < 4; ++xi, maskCounter *= 4) {
-					uint8_t code = (codeBits[codeCounter] >> (2 * xi) & 3);
+			for (int invertYi = 3; invertYi >= 0; --invertYi) {
+				for (int invertXi = 3, xi = 0; invertXi >= 0; --invertXi, ++xi) {
+					int bitPos = 31 - (2 * (invertYi * 4 + invertXi) + 1);
+					int code = ((bits >> bitPos) & 3);
+					uint8_t rgb[3];
+
 					switch (code) {
 					case 0:
-						block.blockData[yi][xi] = decodeRGB(color0);
+						rgb[0] = color0Rgb[0];
+						rgb[1] = color0Rgb[1];
+						rgb[2] = color0Rgb[2];
 						break;
-					case 1:
-						block.blockData[yi][xi] = decodeRGB(color1);
+					case 1: 
+						rgb[0] = color1Rgb[0];
+						rgb[1] = color1Rgb[1];
+						rgb[2] = color1Rgb[2];
 						break;
-					case 2:
-						block.blockData[yi][xi] = decodeRGB(color2);
+					case 2: 
+						rgb[0] = color2Rgb[0];
+						rgb[1] = color2Rgb[1];
+						rgb[2] = color2Rgb[2];
 						break;
 					case 3:
-						block.blockData[yi][xi] = decodeRGB(color3);
+						rgb[0] = color3Rgb[0];
+						rgb[1] = color3Rgb[1];
+						rgb[2] = color3Rgb[2];
 						break;
 					default:
-						std::cerr << "Unknown value for texel color code" << std::endl;
+						std::cerr << "Error decoding image, texel had code value " << code << std::endl;
+						break;
 					}
-				}
-			}
-			//Add block with decoded rgb bytes to blockRow
-			blockRow.push_back(block);
-		}
-		blockMatrice.push_front(blockRow);
-	}
 
-	//Process matrice
-	size_t rowCount = blockMatrice.size();
-	for (size_t blockRowNum = 0; blockRowNum < rowCount; ++blockRowNum) { //loop matrice rows
-		for (int row = 0; row < 4; ++row) { //row counter inside a block
-			size_t blockCount = blockMatrice.at(blockRowNum).size();
-			for (size_t j = 0; j < blockCount; ++j) { //block counter
-				for (int column = 0; column < 4; ++column) { //pixel counter in a row of a block
-					bytesBuffer[byteBufferCount++] = blockMatrice.at(blockRowNum).at(j).blockData[row][column][0]; //red
-					bytesBuffer[byteBufferCount++] = blockMatrice.at(blockRowNum).at(j).blockData[row][column][1]; //green
-					bytesBuffer[byteBufferCount++] = blockMatrice.at(blockRowNum).at(j).blockData[row][column][2]; //blue
+					//Find position pixel position in buffer so that we dont have to iterate
+					unsigned int byteBufferPos = 3 * (width * (4 * invertY + invertYi) + 4 * x + xi);
+					bytesBuffer[byteBufferPos] = rgb[0];		//red
+					bytesBuffer[byteBufferPos + 1] = rgb[1];	//green
+					bytesBuffer[byteBufferPos + 2] = rgb[2];	//blue
 				}
 			}
+			delete[] color0Rgb;
+			delete[] color1Rgb;
+			delete[] color2Rgb;
+			delete[] color3Rgb;
 		}
 	}
 
-	//returns linear representation of rgb bytes
+	//linear rgb buffer
 	return bytesBuffer;
 }
 
@@ -390,23 +408,8 @@ uint8_t * DDSFile::DXT1Compress(const uint8_t* const uncompressedData, const uns
 	return imageData;
 }
 
-uint8_t* DDSFile::toBytes(const uint32_t bits) const
-{
-	uint8_t* byteArray = new uint8_t[4];
-
-	byteArray[0] = (bits >> 24) & 0xFF;
-	byteArray[1] = (bits >> 16) & 0xFF;
-	byteArray[2] = (bits >> 8) & 0xFF;
-	byteArray[3] = bits & 0xFF;
-
-	return byteArray;
-}
-
 uint8_t* DDSFile::decodeRGB(uint16_t color) const {
 	uint8_t* rgb = new uint8_t[3];
-	//rgb[0] = (color & RED_MASK) >> RED_OFFSET;
-	//rgb[1] = (color & GREEN_MASK) >> GREEN_OFFSET;
-	//rgb[2] = (color & BLUE_MASK) << BLUE_OFFSET;
 
 	rgb[0] = (color >> 11) & 31;
 	rgb[1] = (color >> 5) & 63;

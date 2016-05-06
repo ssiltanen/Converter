@@ -44,9 +44,6 @@ Converter.h & .cpp
 MyException.h
 	Custom exception class to send messages when errors happen
 	
-Smiley.dds & .bmp
-	example files used
-	
 	
 	
 Known issues:
@@ -54,7 +51,4 @@ Known issues:
 	
 	
 Known bugs:
-	- Converting from dds to bmp or bmp to dds turns the picture upsidedown.
-	- Converting from bmp to dds adds red layer
-	- Converting from dds to bmp some certain colors changes
-	- Highly detailed files does not convert properly
+	- No known bugs
