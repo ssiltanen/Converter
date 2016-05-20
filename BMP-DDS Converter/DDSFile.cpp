@@ -370,25 +370,22 @@ uint8_t * DDSFile::DXT1Compress(const uint8_t* const uncompressedData, const uns
 			for (unsigned int row = 0; row < 4; ++row) {
 				for (unsigned int column = 0; column < 4; ++column) {
 					int code = 0;
-					double distanceCo0 = sqrt(pow(maxRgb[0] - currentBlock.blockData[row][column][0], 2)
-											+ pow(maxRgb[1] - currentBlock.blockData[row][column][1], 2)
-											+ pow(maxRgb[2] - currentBlock.blockData[row][column][2], 2));
+					int distanceCo0 = std::abs((maxRgb[2] + 256 * (maxRgb[1] + 256 * maxRgb[0])) -
+						(currentBlock.blockData[row][column][2] + 256 * (currentBlock.blockData[row][column][1] + 256 * currentBlock.blockData[row][column][0])));
 
-					double distanceCo2 = sqrt(pow(color2[0] - currentBlock.blockData[row][column][0], 2)
-											+ pow(color2[1] - currentBlock.blockData[row][column][1], 2)
-											+ pow(color2[2] - currentBlock.blockData[row][column][2], 2));
+					int distanceCo2 = std::abs((color2[2] + 256 * (color2[1] + 256 * color2[0])) -
+						(currentBlock.blockData[row][column][2] + 256 * (currentBlock.blockData[row][column][1] + 256 * currentBlock.blockData[row][column][0])));
+
 					//if color is closer to the second color there is no need to compare color0 again
 					if (distanceCo0 > distanceCo2) {
 						code = 2;
-						double distanceCo3 = sqrt(pow(color3[0] - currentBlock.blockData[row][column][0], 2)
-												+ pow(color3[1] - currentBlock.blockData[row][column][1], 2)
-												+ pow(color3[2] - currentBlock.blockData[row][column][2], 2));
+						int distanceCo3 = std::abs((color3[2] + 256 * (color3[1] + 256 * color3[0])) -
+							(currentBlock.blockData[row][column][2] + 256 * (currentBlock.blockData[row][column][1] + 256 * currentBlock.blockData[row][column][0])));
 
 						if (distanceCo2 > distanceCo3) {
 							code = 3;
-							double distanceCo1 = sqrt(pow(minRgb[0] - currentBlock.blockData[row][column][0], 2)
-													+ pow(minRgb[1] - currentBlock.blockData[row][column][1], 2)
-													+ pow(minRgb[2] - currentBlock.blockData[row][column][2], 2));
+							int distanceCo1 = std::abs((minRgb[2] + 256 * (minRgb[1] + 256 * minRgb[0])) -
+								(currentBlock.blockData[row][column][2] + 256 * (currentBlock.blockData[row][column][1] + 256 * currentBlock.blockData[row][column][0])));
 
 							if (distanceCo3 > distanceCo1) {
 								code = 1;
