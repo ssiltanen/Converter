@@ -52,7 +52,9 @@ int main()
 	}
 	catch (...) {
 		std::cout << "Something went horribly wrong!" << std::endl;
+		return 1;
 	}
+	return 0;
 }
 
 std::vector<std::string> separateCommandWords(std::string& command) {

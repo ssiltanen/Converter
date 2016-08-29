@@ -153,6 +153,7 @@
     <ClCompile Include="BMPFile.cpp" />
     <ClCompile Include="Converter.cpp" />
     <ClCompile Include="DDSFile.cpp" />
+    <ClCompile Include="Filetype.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BMPFile.h" />

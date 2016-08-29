@@ -101,13 +101,9 @@ std::shared_ptr<IFiletype> Converter::getUninitializedFiletype(const std::string
 	//Removes existing same type filetype from datastructure
 	removeFiletype(filetype);
 
-	//Initialize right type of filetype
-	std::shared_ptr<IFiletype> ptr;
-	if (filetype == "bmp") 
-		ptr = std::shared_ptr<IFiletype>(new BMPFile());
-	else if (filetype == "dds") 
-		ptr = std::shared_ptr<IFiletype>(new DDSFile());
-	else 
+	//Initialize filetype
+	std::shared_ptr<IFiletype> ptr(IFiletype::create(filetype));
+	if (ptr == nullptr)
 		throw MyException("Filetype " + filetype + " not supported");
 
 	//insert filetype to datastructure

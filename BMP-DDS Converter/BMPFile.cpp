@@ -18,8 +18,8 @@ BMPFile::~BMPFile()
 {
 	if (m_pixels != nullptr)
 		delete[] m_pixels;
-	delete m_pBmpHeader;
-	delete m_pBmpInfoHeader;
+	delete[] m_pBmpHeader;
+	delete[] m_pBmpInfoHeader;
 }
 
 void BMPFile::VInitializeFromFile(const std::string & location)

@@ -16,7 +16,7 @@ DDSFile::DDSFile()
 
 DDSFile::~DDSFile()
 {
-	delete m_pDdsHeader;
+	delete[] m_pDdsHeader;
 	delete[] m_mainData;
 }
 
@@ -318,8 +318,8 @@ uint8_t * DDSFile::DXT1Compress(const uint8_t* const uncompressedData, const uns
 			for (unsigned int row = 0; row < 4; ++row) {
 				for (unsigned int column = 0; column < 4; ++column) {
 					//calculate 16 bit representation of current color
-					uint8_t colorLo = ((currentBlock.blockData[row][column][1] & 7) << 5) | ((currentBlock.blockData[row][column][2] & 248) >> 3);																				//								red 5 bits			green 3 bits
-					uint8_t colorHi = (currentBlock.blockData[row][column][0] & 248) | ((currentBlock.blockData[row][column][1] & 224) >> 5);
+					uint8_t colorLo = ((currentBlock.blockData[row][column][1] & 28) << 3) | (currentBlock.blockData[row][column][2] >> 3);																				//								red 5 bits			green 3 bits
+					uint8_t colorHi = (currentBlock.blockData[row][column][0] & 248) | (currentBlock.blockData[row][column][1] >> 5);
 					uint16_t color16 = colorLo + colorHi * 256;
 
 					//save the value if it is the biggest so far
@@ -341,11 +341,11 @@ uint8_t * DDSFile::DXT1Compress(const uint8_t* const uncompressedData, const uns
 
 			//form the 4 first bytes from reference colors
 			//								green 3 bits			blue 5 bits
-			imageData[imageDataIndex++] = ((maxRgb[1] & 7) << 5) | ((maxRgb[2] & 248) >> 3);	//c0_lo
+			imageData[imageDataIndex++] = ((maxRgb[1] & 28) << 3) | (maxRgb[2] >> 3);	//c0_lo
 			//								red 5 bits			green 3 bits
-			imageData[imageDataIndex++] = (maxRgb[0] & 248) | ((maxRgb[1] & 224) >> 5);			//c0_hi
-			imageData[imageDataIndex++] = ((minRgb[1] & 7) << 5 | (minRgb[2] & 248) >> 3);		//c1_lo
-			imageData[imageDataIndex++] = ((minRgb[0] & 248) | (minRgb[1] & 224) >> 5);			//c1_hi
+			imageData[imageDataIndex++] = (maxRgb[0] & 248) | (maxRgb[1] >> 5);			//c0_hi
+			imageData[imageDataIndex++] = ((minRgb[1] & 28) << 3) | (minRgb[2] >> 3);	//c1_lo
+			imageData[imageDataIndex++] = ((minRgb[0] & 248) | minRgb[1] >> 5);			//c1_hi
 
 			uint8_t color2[3] = { 0,0,0 };
 			uint8_t color3[3] = { 0,0,0 };

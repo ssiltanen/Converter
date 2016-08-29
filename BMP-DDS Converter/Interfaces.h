@@ -1,10 +1,15 @@
 #pragma once
 
 #include <string>
+#include <memory>
 
 class IFiletype {
 public:
 	virtual ~IFiletype() {};
+
+	//Factory method to initialize needed filetype
+	//Returns pointer to given type if the type was valid. Otherwise returns nullptr
+	static std::shared_ptr<IFiletype> create(const std::string& type);
 
 	//Initializes filetype with data from given file
 	//Pre-condition: - Filelocation is valid
