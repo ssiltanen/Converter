@@ -8,6 +8,11 @@ Sampo Siltanen
 This software works as a image file converter. At the moment the supported filetypes are 
 DDS (DXT1/BC1) and BMP (24 bits per pixel).
 
+The architecture of this software is built in a way that new supported image types can be 
+added by adding new classes that implement the interface IFiletype. No other parts of the 
+software has to be altered to do so.
+
+
 Commands:
 L {<filename> | <file location>}
 	- Filename can be used if the file is in the same folder,
