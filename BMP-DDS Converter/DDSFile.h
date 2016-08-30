@@ -50,10 +50,6 @@ typedef struct {			/**** DDS file header ****/
 #define INFO_SIZE 32									//Constant in all DDS files
 #define DDSCAPS_TEXTURE 0x1000							//Required in DDS header
 
-typedef struct {
-	uint8_t* blockData[4][4];
-} Block;
-
 class DDSFile : public IFiletype {
 public:
 	DDSFile();
@@ -76,5 +72,8 @@ private:
 							const unsigned int imageSize, const unsigned int width, const unsigned int height) const;
 	//Decodes 16bit rbg value to 3 bytes
 	uint8_t* decodeRGB(uint16_t color) const;
+
+	//Compresses 3 bytes (rgb) into one 2 bytes value 
+	uint16_t compressRGBBytes(const uint8_t * const rgb) const;
 };
 

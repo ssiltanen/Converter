@@ -30,6 +30,9 @@ BMP-DDS Converter.cpp
 Interfaces.h
 	Collection of interfaces in the software.
 
+Filetype.cpp
+	Contains definition for factory method in IFiletype (see interfaces.h).
+
 BMPFile.h & .cpp
 	BMP filetype that implements IFiletype interface (see interfaces.h)
 
@@ -43,12 +46,3 @@ Converter.h & .cpp
 
 MyException.h
 	Custom exception class to send messages when errors happen
-	
-	
-	
-Known issues:
-	- When converting big files, there are performance issues
-	
-	
-Known bugs:
-	- No known bugs

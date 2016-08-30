@@ -278,130 +278,118 @@ uint8_t * DDSFile::DXT1Compress(const uint8_t* const uncompressedData, const uns
 {
 	//compressed image data to be returned
 	uint8_t* imageData = new uint8_t[compressedImageSize];
-	unsigned int imageDataIndex = 0;
-	std::deque<std::deque<Block>> blockMatrice;
 
-	//Loop through uncompressed data and form matrices of 4x4 blocks of it
-	unsigned int index = 0;
-	while (index < imageSize) { //Go through all bytes of image
-		std::deque<Block> blockRow;
-		for (int rowInBlock = 3; rowInBlock >= 0; --rowInBlock) { //Loop through one block row
-			for (unsigned int blockNum = 0; blockNum < width / 4; ++blockNum) { //Loop through blocks
-				//Create a new block if needed
-				if (blockNum >= blockRow.size()) {
-					Block b;
-					blockRow.push_back(b);
+	//Values used in calculations
+	const unsigned int RGBBytes = 3;
+	const unsigned int bytesInCompressedBlock = 8;
+	const unsigned int pixelsInBlock = 16;
+	const unsigned int pixelsInBlockRow = 4;
+
+	//Loop through all blocks
+	int numberOfBlocks = imageSize / (pixelsInBlock * RGBBytes);
+	int blockX = 0;
+	int blockY = 0;
+	for (int blockNum = 0; blockNum < numberOfBlocks; ++blockNum, ++blockX) {
+		
+		//Keep track of current block
+		if (blockNum != 0 && blockNum % (width / pixelsInBlockRow) == 0) {
+			blockX = 0;
+			++blockY;
+		}			
+
+		//Loop through pixels in block to find min and max color values
+		uint16_t min16 = 65535; //initialized with max value
+		uint16_t max16 = 0;		//initialized with min value
+		uint8_t maxRgb[RGBBytes] = { 0, 0, 0 };		//color0
+		uint8_t minRgb[RGBBytes] = { 255, 255, 255 };	//color1
+		for (int y = 0; y < 4; ++y) {
+			for (int x = 0; x < 4; ++x) {
+
+				//Calculate from where to read color bytes
+				unsigned int bytePos = RGBBytes * (blockY * pixelsInBlockRow * width + blockX * pixelsInBlockRow + y * width + x);
+				uint8_t rgb[RGBBytes] = { uncompressedData[bytePos], uncompressedData[bytePos + 1], uncompressedData[bytePos + 2] };
+				uint16_t temp = compressRGBBytes(rgb);
+
+				//save the value if it is the biggest so far
+				if (temp > max16) {
+					max16 = temp;
+					maxRgb[0] = rgb[0];
+					maxRgb[1] = rgb[1];
+					maxRgb[2] = rgb[2];
 				}
-				//read pixel data
-				for (unsigned int pixelNum = 0; pixelNum < 4; ++pixelNum) { //4 pixels in a row
-					uint8_t* rgb = new uint8_t[3];
-					rgb[0] = uncompressedData[index++];
-					rgb[1] = uncompressedData[index++];
-					rgb[2] = uncompressedData[index++];
-					blockRow.at(blockNum).blockData[rowInBlock][pixelNum] = rgb;
+				//save the value if it is the smallest so far
+				if (temp < min16) {
+					min16 = temp;
+					minRgb[0] = rgb[0];
+					minRgb[1] = rgb[1];
+					minRgb[2] = rgb[2];
 				}
 			}
 		}
-		blockMatrice.push_front(blockRow);
-	}
 
-	//Go through every block and calculate the reference colors for them and map pixel colors to them
-	for (unsigned int y = 0; y < blockMatrice.size(); ++y) {
-		for (unsigned int x = 0; x < blockMatrice.at(y).size(); ++x) {
+		//Place blocks in reverse order (invert both x and y)
+		unsigned int totalYBlocks = height / pixelsInBlockRow; //Row = column in this case
+		unsigned int totalXBlocks = width / pixelsInBlockRow;
+		unsigned int compressBytePos = bytesInCompressedBlock * (totalYBlocks * totalXBlocks - blockY * totalXBlocks - totalXBlocks + blockX);
 
-			//Count the reference colors for a block
-			Block currentBlock = blockMatrice.at(y).at(x);
-			uint16_t min16 = 65535; //initialized with max value
-			uint16_t max16 = 0;		//initialized with min value
-			uint8_t maxRgb[3] = { 0, 0, 0 };		//color0
-			uint8_t minRgb[3] = {255, 255, 255};	//color1
-			for (unsigned int row = 0; row < 4; ++row) {
-				for (unsigned int column = 0; column < 4; ++column) {
-					//calculate 16 bit representation of current color
-					uint8_t colorLo = ((currentBlock.blockData[row][column][1] & 28) << 3) | (currentBlock.blockData[row][column][2] >> 3);																				//								red 5 bits			green 3 bits
-					uint8_t colorHi = (currentBlock.blockData[row][column][0] & 248) | (currentBlock.blockData[row][column][1] >> 5);
-					uint16_t color16 = colorLo + colorHi * 256;
+		//form the 4 first bytes from reference colors 
+		//								green 3 bits			blue 5 bits
+		imageData[compressBytePos++] = ((maxRgb[1] & 28) << 3) | (maxRgb[2] >> 3);		//c0_lo
+		//								red 5 bits			green 3 bits
+		imageData[compressBytePos++] = (maxRgb[0] & 248) | (maxRgb[1] >> 5);			//c0_hi
+		imageData[compressBytePos++] = ((minRgb[1] & 28) << 3) | (minRgb[2] >> 3);		//c1_lo
+		imageData[compressBytePos++] = ((minRgb[0] & 248) | minRgb[1] >> 5);			//c1_hi
 
-					//save the value if it is the biggest so far
-					if (color16 > max16) {
-						max16 = color16;
-						maxRgb[0] = currentBlock.blockData[row][column][0];
-						maxRgb[1] = currentBlock.blockData[row][column][1];
-						maxRgb[2] = currentBlock.blockData[row][column][2];
-					}
-					//save the value if it is the smallest so far
-					if (color16 < min16) {
-						min16 = color16;
-						minRgb[0] = currentBlock.blockData[row][column][0];
-						minRgb[1] = currentBlock.blockData[row][column][1];
-						minRgb[2] = currentBlock.blockData[row][column][2];
-					}
-				}
-			}
+		uint8_t color2[RGBBytes] = { 0,0,0 };
+		uint8_t color3[RGBBytes] = { 0,0,0 };
+		if (max16 > min16) {
+			color2[0] = (2 * maxRgb[0] + minRgb[0]) / 3;
+			color2[1] = (2 * maxRgb[1] + minRgb[1]) / 3;
+			color2[2] = (2 * maxRgb[2] + minRgb[2]) / 3;
 
-			//form the 4 first bytes from reference colors
-			//								green 3 bits			blue 5 bits
-			imageData[imageDataIndex++] = ((maxRgb[1] & 28) << 3) | (maxRgb[2] >> 3);	//c0_lo
-			//								red 5 bits			green 3 bits
-			imageData[imageDataIndex++] = (maxRgb[0] & 248) | (maxRgb[1] >> 5);			//c0_hi
-			imageData[imageDataIndex++] = ((minRgb[1] & 28) << 3) | (minRgb[2] >> 3);	//c1_lo
-			imageData[imageDataIndex++] = ((minRgb[0] & 248) | minRgb[1] >> 5);			//c1_hi
+			color3[0] = (maxRgb[0] + minRgb[0] * 2) / 3;
+			color3[1] = (maxRgb[1] + minRgb[1] * 2) / 3;
+			color3[2] = (maxRgb[2] + minRgb[2] * 2) / 3;
+		}
+		else {
+			color2[0] = (maxRgb[0] + minRgb[0]) / 2;
+			color2[1] = (maxRgb[1] + minRgb[1]) / 2;
+			color2[2] = (maxRgb[2] + minRgb[2]) / 2;
+		}
 
-			uint8_t color2[3] = { 0,0,0 };
-			uint8_t color3[3] = { 0,0,0 };
-			if (max16 > min16) {
-				color2[0] = (2 * maxRgb[0] + minRgb[0]) / 3;
-				color2[1] = (2 * maxRgb[1] + minRgb[1]) / 3;
-				color2[2] = (2 * maxRgb[2] + minRgb[2]) / 3;
-
-				color3[0] = (maxRgb[0] + minRgb[0] * 2) / 3;
-				color3[1] = (maxRgb[1] + minRgb[1] * 2) / 3;
-				color3[2] = (maxRgb[2] + minRgb[2] * 2) / 3;
-			}
-			else {
-				color2[0] = (maxRgb[0] + minRgb[0]) / 2;
-				color2[1] = (maxRgb[1] + minRgb[1]) / 2;
-				color2[2] = (maxRgb[2] + minRgb[2]) / 2;
-			}
-
-
-			//map pixel colors to reference colors
+		//Loop through pixel colors of block to map colors to reference colors
+		for (int y = 3; y >= 0; --y) {
 			uint8_t codeByte = 0;
-			for (unsigned int row = 0; row < 4; ++row) {
-				for (unsigned int column = 0; column < 4; ++column) {
-					int code = 0;
-					int distanceCo0 = std::abs((maxRgb[2] + 256 * (maxRgb[1] + 256 * maxRgb[0])) -
-						(currentBlock.blockData[row][column][2] + 256 * (currentBlock.blockData[row][column][1] + 256 * currentBlock.blockData[row][column][0])));
+			for (int x = 3; x >= 0; --x) {
 
-					int distanceCo2 = std::abs((color2[2] + 256 * (color2[1] + 256 * color2[0])) -
-						(currentBlock.blockData[row][column][2] + 256 * (currentBlock.blockData[row][column][1] + 256 * currentBlock.blockData[row][column][0])));
+				unsigned int bytePos = RGBBytes * (blockY * pixelsInBlockRow * width + blockX * pixelsInBlockRow + y * width + x);
+				uint8_t rgb[RGBBytes] = { uncompressedData[bytePos], uncompressedData[bytePos + 1], uncompressedData[bytePos + 2] };
+				int code = 0;
 
-					//if color is closer to the second color there is no need to compare color0 again
-					if (distanceCo0 > distanceCo2) {
-						code = 2;
-						int distanceCo3 = std::abs((color3[2] + 256 * (color3[1] + 256 * color3[0])) -
-							(currentBlock.blockData[row][column][2] + 256 * (currentBlock.blockData[row][column][1] + 256 * currentBlock.blockData[row][column][0])));
+				int distanceCo0 = std::abs((maxRgb[2] + 256 * (maxRgb[1] + 256 * maxRgb[0])) - (rgb[2] + 256 * (rgb[1] + 256 * rgb[0])));
+				int distanceCo2 = std::abs((color2[2] + 256 * (color2[1] + 256 * color2[0])) - (rgb[2] + 256 * (rgb[1] + 256 * rgb[0])));
 
-						if (distanceCo2 > distanceCo3) {
-							code = 3;
-							int distanceCo1 = std::abs((minRgb[2] + 256 * (minRgb[1] + 256 * minRgb[0])) -
-								(currentBlock.blockData[row][column][2] + 256 * (currentBlock.blockData[row][column][1] + 256 * currentBlock.blockData[row][column][0])));
+				//if color is closer to the second color there is no need to compare color0 again
+				if (distanceCo0 > distanceCo2) {
+					code = 2;
+					int distanceCo3 = std::abs((color3[2] + 256 * (color3[1] + 256 * color3[0])) - (rgb[2] + 256 * (rgb[1] + 256 * rgb[0])));
 
-							if (distanceCo3 > distanceCo1) {
-								code = 1;
-							}
+					if (distanceCo2 > distanceCo3) {
+						code = 3;
+						int distanceCo1 = std::abs((minRgb[2] + 256 * (minRgb[1] + 256 * minRgb[0])) - (rgb[2] + 256 * (rgb[1] + 256 * rgb[0])));
+
+						if (distanceCo3 > distanceCo1) {
+							code = 1;
 						}
 					}
-					delete[] currentBlock.blockData[row][column];
-					//Form byte of 2 bit codes, pixels a to e are in order MSB e -> a LSB
-					codeByte = (codeByte | (uint8_t)((code & 3) << 2 * column));
 				}
-				imageData[imageDataIndex++] = codeByte;
-				codeByte = 0;
-			}
-		}
-	}
 
+				//Form byte of 2 bit codes, pixels a to e are in order MSB e -> a LSB
+				codeByte = (codeByte | (uint8_t)((code & 3) << 2 * x));
+			}
+			imageData[compressBytePos++] = codeByte;
+		}	
+	}
 	return imageData;
 }
 
@@ -417,4 +405,11 @@ uint8_t* DDSFile::decodeRGB(uint16_t color) const {
 	rgb[2] = (rgb[2] << 3) | (rgb[2] >> 2);
 
 	return rgb;
+}
+
+uint16_t DDSFile::compressRGBBytes(const uint8_t * const rgb) const
+{
+	uint8_t colorLo = ((rgb[1] & 28) << 3) | (rgb[2] >> 3);																				//								red 5 bits			green 3 bits
+	uint8_t colorHi = (rgb[0] & 248) | (rgb[1] >> 5);
+	return colorLo + colorHi * 256;
 }
